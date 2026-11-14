@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin — CFDSemarang</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="assets/lambang-semarang.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="admin-body">
+
+  <!-- ============ PIN GATE (M1 — autentikasi nyata di M3) ============ -->
+  <div class="admin-gate" id="adminGate">
+    <div class="admin-gate-card">
+      <img src="assets/lambang-semarang.svg" alt="" class="brand-logo">
+      <h1>Panel Admin</h1>
+      <p class="muted small">Masukkan PIN admin untuk melihat data pemesanan.</p>
+      <form id="gateForm">
+        <input type="password" id="gatePin" inputmode="numeric" placeholder="PIN admin" autocomplete="current-password" required>
+        <button type="submit" class="btn btn-primary btn-block">Masuk</button>
+        <p class="small muted" id="gateError" hidden>PIN salah. Coba lagi.</p>
+      </form>
+      <p class="small muted">M1: PIN sementara di <code>js/config.js</code>. Login nyata menyusul di M3.</p>
+    </div>
+  </div>
+
+  <!-- ============ PANEL ============ -->
+  <main class="admin-page" id="adminPage" hidden>
+    <header class="admin-header">
+      <div class="brand">
+        <img src="assets/lambang-semarang.svg" alt="" class="brand-logo">
+        <div class="brand-text">
+          <strong>Panel Admin</strong>
+          <span>CFDSemarang</span>
+        </div>
+      </div>
+      <nav class="top-nav">
+        <a href="index.html#peta">← Kembali ke situs</a>
+      </nav>
+    </header>
+
+    <section class="admin-section">
+      <div class="stat-cards" id="statCards"><!-- diisi admin.js --></div>
+      <div class="type-breakdown" id="typeBreakdown"></div>
+    </section>
+
+    <section class="admin-section">
+      <div class="admin-filters">
+        <label>Minggu
+          <select id="fDate"></select>
+        </label>
+        <label>Jenis usaha
+          <select id="fType"></select>
+        </label>
+        <label>Status bayar
+          <select id="fStatus">
+            <option value="">Semua</option>
+            <option value="paid">Lunas</option>
+            <option value="pending">Menunggu</option>
+          </select>
+        </label>
+        <label>Cari
+          <input type="search" id="fSearch" placeholder="nama / kode / lapak / WA">
+        </label>
+        <button type="button" class="btn btn-ghost" id="csvBtn">Unduh CSV</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="admin-table" id="bookTable">
+          <thead>
+            <tr>
+              <th>Minggu</th>
+              <th>Kode</th>
+              <th>Lapak</th>
+              <th>Nama</th>
+              <th>Jenis usaha</th>
+              <th>WhatsApp</th>
+              <th>Status bayar</th>
+              <th>Dipesan</th>
+            </tr>
+          </thead>
+          <tbody id="bookRows"></tbody>
+        </table>
+        <p class="empty-note" id="emptyNote" hidden>Belum ada pemesanan yang cocok dengan filter.</p>
+      </div>
+
+      <p class="note">
+        M1: data dibaca dari perangkat ini (mock, sebelum API + database aktif di M2).
+        Harga per spot: <span id="priceNote"></span>.
+      </p>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

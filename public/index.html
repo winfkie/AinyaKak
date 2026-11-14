@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CFDSemarang — Sewa Lapak Car Free Day Semarang</title>
+  <meta name="description" content="Pilih dan pesan lapak untuk berjualan di Car Free Day Semarang setiap Minggu pagi. Peta interaktif zona A–D, bayar via QRIS, e-t langsung.">
+  <link rel="icon" type="image/svg+xml" href="assets/lambang-semarang.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ============ HEADER ============ -->
+  <header class="site-header">
+    <div class="brand">
+      <img src="assets/lambang-semarang.svg" alt="Lambang Kota Semarang" class="brand-logo">
+      <div class="brand-text">
+        <strong>CFDSemarang</strong>
+        <span>Lapak Car Free Day Semarang</span>
+      </div>
+    </div>
+    <nav class="top-nav">
+      <a href="#peta">Peta Lapak</a>
+      <a href="#cara">Cara Pesan</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="hero-kicker">Setiap Minggu · 06.00–10.00 WIB</p>
+      <h1>Punya lapak bagus di Car Free Day Semarang,<br>tinggal pilih di peta.</h1>
+      <p class="hero-sub">
+        Lihat peta koridor CFD — Simpang Lima sampai Tugu Muda — klik spot 3×3 m
+        yang kosong, pesan, bayar QRIS. Selesai dalam 5 menit.
+      </p>
+      <a href="#peta" class="btn btn-primary">Pilih Lapak Sekarang</a>
+      <p class="hero-note">Tanpa login · e-tiket langsung ke HP kamu</p>
+    </div>
+
+    <!-- Click-to-play YouTube: loads nothing until clicked (fast + light) -->
+    <div class="hero-video" data-yt="6k6N3AoKd4s" role="button" tabindex="0"
+         aria-label="Putar video suasana Car Free Day Simpang Lima Semarang">
+      <img src="https://i.ytimg.com/vi/6k6N3AoKd4s/hqdefault.jpg" alt="Suasana Car Free Day Simpang Lima Semarang" loading="lazy">
+      <span class="play-badge">▶ Lihat suasana CFD</span>
+    </div>
+  </section>
+
+  <!-- ============ SUNDAY PICKER ============ -->
+  <section class="section" id="pesan">
+    <div class="section-head">
+      <h2>1 · Pilih minggunya dulu</h2>
+      <p>Kalender menampilkan hari Minggu saja. Pemesanan buka Senin dan tutup Sabtu 18.00 WIB.</p>
+    </div>
+    <div class="sunday-strip" id="sundayStrip" aria-label="Kalender pilih hari Minggu"></div>
+  </section>
+
+  <!-- ============ MAP ============ -->
+  <section class="section section-map" id="peta">
+    <div class="section-head">
+      <h2>2 · Peta lapak koridor CFD</h2>
+      <p>Klik titik lapak (kotak kuning) untuk melihat detail dan memilihnya. Skema peta tidak berskala.</p>
+    </div>
+
+    <div class="map-legend">
+      <span class="legend-item"><i class="dot dot-free"></i> Tersedia</span>
+      <span class="legend-item"><i class="dot dot-pending"></i> Menunggu bayar</span>
+      <span class="legend-item"><i class="dot dot-sold"></i> Terisi</span>
+      <span class="legend-item"><i class="dot dot-yours"></i> Pesanan kamu</span>
+    </div>
+
+    <div class="map-wrap">
+      <svg id="cfdMap" viewBox="0 0 820 1560" role="img" aria-label="Peta skematis koridor Car Free Day Semarang"></svg>
+    </div>
+
+    <p class="map-caption">Zona A Simpang Lima · Zona B DP Mall · Zona C Tugu Muda/Lawang Sewu · Zona D Jl. Pahlawan</p>
+  </section>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section class="section" id="cara">
+    <div class="section-head">
+      <h2>3 · Cara pesan</h2>
+    </div>
+    <ol class="steps">
+      <li><strong>Pilih minggu &amp; lapak</strong> di peta di atas.</li>
+      <li><strong>Isi data singkat</strong> — nama, jenis usaha, nomor WhatsApp. Tanpa daftar akun.</li>
+      <li><strong>Bayar via QRIS</strong> — scan pakai aplikasi apa pun. Lapak mengunci 15 menit selama menunggu bayar.</li>
+      <li><strong>E-tiket muncul</strong> — simpan tautannya, tunjukkan QR di lapak saat Minggu pagi.</li>
+    </ol>
+    <p class="note">Pemilik lapak wajib mengurus <em>Izin Pemeriahan Car Free Day</em> dari Dinas Lingkungan Hidup Kota Semarang — lihat FAQ.</p>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section class="section" id="faq">
+    <div class="section-head">
+      <h2>FAQ</h2>
+    </div>
+    <div class="faq">
+      <details>
+        <summary>CFD Semarang di mana dan jam berapa?</summary>
+        <p>Setiap Minggu pagi ± 06.00–09.00/10.00 WIB di koridor Simpang Lima — Jl. Pemuda — Tugu Muda (dan Jl. Pahlawan). Sumber: PPID Kota Semarang.</p>
+      </details>
+      <details>
+        <summary>Apakah saya perlu izin untuk berjualan?</summary>
+        <p>Ya. Pedagang/lapak di area CFD perlu <em>Izin Pemeriahan Car Free Day</em> dari Dinas Lingkungan Hidup Kota Semarang (surat permohonan ditujukan ke Kepala DLH). Pesan lapak dulu di sini, lalu urus izinnya.</p>
+      </details>
+      <details>
+        <summary>Ukuran lapak berapa?</summary>
+        <p>3 × 3 meter per spot, menghadap sisi jalan. Jalur pejalan tetap dibebaskan.</p>
+      </details>
+      <details>
+        <summary>Kalau sudah bayar lalu batal?</summary>
+        <p>Batalkan sebelum Sabtu 18.00 WIB → dana kembali sesuai kebijakan refund. Setelah itu lapak dianggap terpakai.</p>
+      </details>
+      <details>
+        <summary>Apakah ini situs resmi pemerintah?</summary>
+        <p>Bukan. CFDSemarang adalah layanan independen pemesanan lapak CFD dan tidak berafiliasi dengan Pemerintah Kota Semarang. Lambang kota dipakai sebagai identitas wilayah (domain publik).</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="site-footer">
+    <p><strong>CFDSemarang</strong> — lapak CFD Semarang, setiap Minggu pagi.</p>
+    <p class="small">
+      Video suasana: YouTube <a href="https://www.youtube.com/watch?v=6k6N3AoKd4s" rel="noopener" target="_blank">4K Simpang Lima CFD</a> ·
+      Lambang kota: <a href="https://commons.wikimedia.org/wiki/File:Seal_of_the_City_of_Semarang.svg" rel="noopener" target="_blank">Wikimedia Commons (domain publik)</a><br>
+      Bukan situs resmi Pemerintah Kota Semarang. ·
+      <a href="admin.html" rel="nofollow">Panel admin</a>
+    </p>
+  </footer>
+
+  <!-- ============ SPOT POPUP ============ -->
+  <div class="popup-backdrop" id="spotPopup" hidden>
+    <div class="popup" role="dialog" aria-modal="true" aria-labelledby="spotTitle">
+      <button class="popup-close" id="popupClose" aria-label="Tutup">×</button>
+      <p class="popup-zone" id="popupZone"></p>
+      <h3 id="spotTitle"></h3>
+      <dl class="spot-facts">
+        <div><dt>Ukuran</dt><dd>3 × 3 m</dd></div>
+        <div><dt>Jadwal</dt><dd id="spotDate"></dd></div>
+        <div><dt>Harga</dt><dd id="spotPrice"></dd></div>
+        <div><dt>Status</dt><dd id="spotStatus"></dd></div>
+      </dl>
+      <div class="popup-actions">
+        <button class="btn btn-primary" id="chooseBtn">Pilih lapak ini?</button>
+        <a class="btn btn-wa" id="askWaBtn" href="#" target="_blank" rel="noopener">Tanya admin ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BOOKING MODAL ============ -->
+  <div class="popup-backdrop" id="bookModal" hidden>
+    <div class="popup" role="dialog" aria-modal="true" aria-labelledby="bookTitle">
+      <button class="popup-close" id="bookClose" aria-label="Tutup">×</button>
+      <h3 id="bookTitle">Data penyewa</h3>
+      <p class="muted" id="bookSpotLabel"></p>
+      <form id="bookForm">
+        <label>Nama / nama dagang
+          <input type="text" id="fName" required maxlength="60" placeholder="cth. Warung Bu Sri">
+        </label>
+        <label>Jenis usaha
+          <select id="fType" required>
+            <option value="" disabled selected>Pilih…</option>
+            <option>Kuliner</option>
+            <option>Fashion</option>
+            <option>Kerajinan</option>
+            <option>Jasa / layanan</option>
+            <option>Lainnya</option>
+          </select>
+        </label>
+        <label>Nomor WhatsApp
+          <input type="tel" id="fWa" required pattern="[0-9+ ]{9,16}" placeholder="08xxxxxxxxxx">
+        </label>
+        <label class="consent">
+          <input type="checkbox" id="fConsent" required>
+          <span>Saya setuju data (nama &amp; WA) dipakai untuk pengelolaan lapak ini.</span>
+        </label>
+        <button type="submit" class="btn btn-primary btn-block">Lanjut bayar QRIS</button>
+        <p class="muted small">Demo M1: pembayaran QRIS nyata menyusul di tahap berikutnya.</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ FLOATING WHATSAPP ============ -->
+  <!-- TODO(user): ganti nomor admin di js/config.js (waMeNumber) -->
+  <a class="wa-fab" id="waFab" href="#" target="_blank" rel="noopener" aria-label="Chat admin via WhatsApp">
+    <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor" aria-hidden="true">
+      <path d="M16 3C9.4 3 4 8.4 4 15c0 2.1.6 4.1 1.6 5.9L4 29l8.3-1.6c1.7.9 3.6 1.4 5.7 1.4h.1c6.6 0 12-5.4 12-12S22.6 3 16 3zm0 21.9c-1.8 0-3.5-.5-5-1.4l-.4-.2-4.4.9.9-4.3-.3-.4C6 18.2 5.5 16.6 5.5 15 5.5 9.2 10.2 4.5 16 4.5S26.5 9.2 26.5 15 21.8 24.9 16 24.9zm5.5-7.4c-.3-.2-1.8-.9-2.1-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1-.3-.2-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6l.5-.6c.2-.2.2-.3.3-.5.1-.2 0-.4 0-.6-.1-.2-.7-1.7-1-2.3-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.8-.7 2-1.4.3-.7.3-1.3.2-1.4-.1-.2-.3-.2-.5-.3z"/>
+    </svg>
+  </a>
+
+  <!-- ============ TOAST ============ -->
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

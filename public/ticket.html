@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Tiket Lapak — CFDSemarang</title>
+  <link rel="icon" type="image/svg+xml" href="assets/lambang-semarang.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="ticket-page">
+    <div class="ticket-card" id="ticketCard">
+      <div class="ticket-head">
+        <img src="assets/lambang-semarang.svg" alt="" class="brand-logo">
+        <div>
+          <strong>CFDSemarang</strong>
+          <span class="small muted">E-Tiket Lapak CFD Semarang</span>
+        </div>
+      </div>
+
+      <h1 id="tSpot">Lapak —</h1>
+      <p id="tDate" class="muted"></p>
+
+      <div class="ticket-qr" id="qrBox"></div>
+      <p class="ticket-code" id="tCode">—</p>
+      <p class="small muted">Tunjukkan QR ini ke petugas saat check-in Minggu pagi.</p>
+
+      <dl class="spot-facts">
+        <div><dt>Nama</dt><dd id="tName">—</dd></div>
+        <div><dt>Jenis usaha</dt><dd id="tType">—</dd></div>
+        <div><dt>WhatsApp</dt><dd id="tWa">—</dd></div>
+        <div><dt>Status</dt><dd id="tStatus">—</dd></div>
+      </dl>
+
+      <p class="note" id="tDemo">
+        ⚠️ Demo M1 — tiket ini belum terhubung ke pembayaran nyata.
+      </p>
+
+      <div class="popup-actions">
+        <button class="btn btn-ghost" onclick="window.print()">Cetak / simpan PDF</button>
+        <a class="btn btn-primary" href="index.html#peta">Kembali ke peta</a>
+      </div>
+    </div>
+    <p class="small muted" id="notFound" hidden>Booking tidak ditemukan di perangkat ini. Coba buka tautan tiket dari HP yang dipakai memesan.</p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
+  <script>
+    (function () {
+      const q = new URLSearchParams(location.search);
+      let code = q.get("code");
+      let date = q.get("date");
+      // Fallback: beberapa server statis menghapus query saat redirect
+      // clean-URL — pakai referensi tiket terakhir di perangkat ini.
+      if (!code || !date) {
+        try {
+          const last = JSON.parse(localStorage.getItem("cfdsemarang.last.v1"));
+          if (last && last.code) { code = last.code; date = last.date; }
+        } catch (e) {}
+      }
+      const $ = (s) => document.querySelector(s);
+      let store = {};
+      try { store = JSON.parse(localStorage.getItem("cfdsemarang.bookings.v1")) || {}; } catch (e) {}
+      const day = store[date] || {};
+      const keys = Object.keys(day);
+      const booking = (code && day[code]) ? day[code] : (keys.length ? day[keys[0]] : null);
+      const spotCode = (code && day[code]) ? code : keys[0];
+
+      if (!booking) { $("#notFound").hidden = false; $("#ticketCard").hidden = true; return; }
+
+      $("#tSpot").textContent = "Lapak " + spotCode;
+      $("#tCode").textContent = booking.code;
+      $("#tName").textContent = booking.name;
+      $("#tType").textContent = booking.type;
+      $("#tWa").textContent = booking.wa;
+      $("#tStatus").textContent = booking.status === "paid" ? "LUNAS" : "Menunggu pembayaran";
+      $("#tStatus").style.color = booking.status === "paid" ? "#2E7D32" : "#B22A1E";
+      if (date) {
+        const d = new Date(date + "T00:00:00");
+        const bulan = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+        $("#tDate").textContent = d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+      }
+      if (typeof QRCode === "function") {
+        new QRCode($("#qrBox"), { text: booking.code, width: 148, height: 148, colorDark: "#111111", colorLight: "#ffffff" });
+      } else {
+        $("#qrBox").textContent = "(QR gagal dimuat)";
+      }
+    })();
+  </script>
+</body>
+</html>

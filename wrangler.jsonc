@@ -1,0 +1,16 @@
+// CFDSemarang — Cloudflare Worker (static assets now; API + D1 land in M2)
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cfdsemarang",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./public"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cfdsemarang-db",
+      "database_id": "bb25fcac-c911-4f73-aaff-101b7ad68222"
+    }
+  ]
+}

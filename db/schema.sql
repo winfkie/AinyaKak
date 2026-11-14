@@ -1,0 +1,34 @@
+-- CFDSemarang — skema database D1 (SQLite)
+-- Diterapkan lewat: npx wrangler d1 execute cfdsemarang-db --remote --file=db/schema.sql
+-- (atau cf CLI / dashboard D1 console)
+
+-- Satu baris per pemesanan lapak untuk satu Minggu tertentu.
+CREATE TABLE IF NOT EXISTS bookings (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  code         TEXT NOT NULL UNIQUE,          -- cfs-A-B05-XXXX
+  spot_code    TEXT NOT NULL,                 -- A-B05 (Zona A, sisi Barat, nomor 05)
+  event_date   TEXT NOT NULL,                 -- 'YYYY-MM-DD' (Minggu CFD)
+  name         TEXT NOT NULL,                 -- nama / nama dagang penyewa
+  business_type TEXT NOT NULL,                -- Kuliner / Fashion / Kerajinan / Jasa / Lainnya
+  wa_number    TEXT NOT NULL,                 -- WhatsApp penyewa
+  amount_idr   INTEGER NOT NULL,              -- harga saat booking (backup dari config)
+  status       TEXT NOT NULL DEFAULT 'pending', -- pending | paid | expired | cancelled
+  payment_ref  TEXT,                          -- order_id Midtrans / QRIS
+  paid_at      TEXT,                          -- ISO timestamp saat webhook paid
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+
+  -- Satu lapak hanya bisa dipesan sekali per Minggu.
+  UNIQUE (spot_code, event_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bookings_date   ON bookings (event_date);
+CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (event_date, status);
+
+-- Pengaturan harga per zona (admin-editable, M3).
+CREATE TABLE IF NOT EXISTS zone_prices (
+  zone        TEXT PRIMARY KEY,               -- 'A' | 'B' | 'C' | 'D'
+  price_idr   INTEGER NOT NULL
+);
+
+INSERT OR IGNORE INTO zone_prices (zone, price_idr) VALUES
+  ('A', 25000), ('B', 25000), ('C', 25000), ('D', 25000);
