@@ -1,10 +1,9 @@
 /* CFDSemarang — site config.
- * TODO(user): isi nomor WhatsApp admin (format internasional tanpa "+" dan tanpa spasi).
- * Contoh: 6281234567890
+ * Format nomor WhatsApp internasional tanpa "+" dan tanpa spasi.
  */
 window.CFDS = {
   // Nomor admin untuk tombol WhatsApp melayang & tombol "Tanya admin".
-  waMeNumber: "6280000000000", // PLACEHOLDER — ganti dengan nomor admin asli
+  waMeNumber: "6281232793825",
 
   // Template pesan; {spot} diganti kode lapak jika konteks ada.
   waMessage: "Halo admin CFDSemarang, saya mau tanya soal sewa lapak CFD Semarang",

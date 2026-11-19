@@ -51,8 +51,10 @@ npx serve public          # alternatif server statis
 ## Men-deploy
 
 ```
-npx wrangler deploy       # → https://cfdsemarang.<subdomain>.workers.dev
+cf deploy public        # → https://cfdsemarang.<subdomain>.workers.dev
 ```
+
+> `cf deploy public` mengunggah hanya folder `public/` (nama worker dari `package.json`).
 
 ## Data pemesanan
 
@@ -107,7 +109,7 @@ Buka `/admin.html` (tautan kecil juga ada di footer situs).
 
 ## TODO sebelum publik
 
-- [ ] Ganti `waMeNumber` di `public/js/config.js` dengan nomor WhatsApp admin asli.
+- [x] Ganti `waMeNumber` di `public/js/config.js` dengan nomor WhatsApp admin asli.
 - [ ] Ganti PIN admin (`adminPin`) di `public/js/config.js`.
 - [ ] Midtrans sandbox keys (M2).
 - [ ] Konfirmasi jadwal/jam CFD terbaru dari PPID Kota Semarang.
