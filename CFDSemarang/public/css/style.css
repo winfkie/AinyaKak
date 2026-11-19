@@ -55,6 +55,8 @@ a { color: inherit; }
 .btn-block { width: 100%; }
 .btn-wa { background: var(--green); color: #fff; }
 .btn-ghost { background: transparent; color: var(--black); border: 1.5px solid var(--black); }
+.btn-xs { padding: 4px 8px; font-size: 0.78rem; border-radius: 6px; }
+.row-actions { display: flex; gap: 4px; flex-wrap: wrap; }
 
 /* ---------- hero ---------- */
 .hero {
@@ -358,6 +360,7 @@ a { color: inherit; }
 }
 .badge-paid { background: #e5f2e6; color: var(--green); }
 .badge-pending { background: #fdecea; color: var(--red); }
+.badge-cancel { background: #eee; color: #666; }
 
 /* ---------- toast ---------- */
 .toast {

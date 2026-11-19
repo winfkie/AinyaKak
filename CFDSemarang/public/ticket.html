@@ -29,19 +29,26 @@
         <div><dt>Nama</dt><dd id="tName">—</dd></div>
         <div><dt>Jenis usaha</dt><dd id="tType">—</dd></div>
         <div><dt>WhatsApp</dt><dd id="tWa">—</dd></div>
+        <div><dt>Biaya</dt><dd id="tPrice">—</dd></div>
         <div><dt>Status</dt><dd id="tStatus">—</dd></div>
       </dl>
 
       <p class="note" id="tDemo">
-        ⚠️ Demo M1 — tiket ini belum terhubung ke pembayaran nyata.
+        Status tiket diperbarui otomatis setelah pembayaran terverifikasi.
+      </p>
+
+      <p class="small muted" id="tPay" hidden>
+        Pembayaran belum selesai.
+        <a href="#" id="tPayLink" target="_blank" rel="noopener">Buka halaman pembayaran QRIS</a>
       </p>
 
       <div class="popup-actions">
+        <button class="btn btn-ghost" id="tRefresh">Muat ulang status</button>
         <button class="btn btn-ghost" onclick="window.print()">Cetak / simpan PDF</button>
         <a class="btn btn-primary" href="index.html#peta">Kembali ke peta</a>
       </div>
     </div>
-    <p class="small muted" id="notFound" hidden>Booking tidak ditemukan di perangkat ini. Coba buka tautan tiket dari HP yang dipakai memesan.</p>
+    <p class="small muted" id="notFound" hidden>Tautan tiket tidak lengkap. Buka tiket dari tautan yang diberikan setelah memesan.</p>
   </main>
 
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
@@ -50,41 +57,96 @@
       const q = new URLSearchParams(location.search);
       let code = q.get("code");
       let date = q.get("date");
-      // Fallback: beberapa server statis menghapus query saat redirect
-      // clean-URL — pakai referensi tiket terakhir di perangkat ini.
-      if (!code || !date) {
+      // Fallback: kalau query hilang (redirect/hosting), pakai tiket terakhir
+      // yang dibuat di perangkat ini.
+      if (!code) {
         try {
           const last = JSON.parse(localStorage.getItem("cfdsemarang.last.v1"));
-          if (last && last.code) { code = last.code; date = last.date; }
+          if (last && last.code) { code = last.code; date = date || last.date; }
         } catch (e) {}
       }
       const $ = (s) => document.querySelector(s);
-      let store = {};
-      try { store = JSON.parse(localStorage.getItem("cfdsemarang.bookings.v1")) || {}; } catch (e) {}
-      const day = store[date] || {};
-      const keys = Object.keys(day);
-      const booking = (code && day[code]) ? day[code] : (keys.length ? day[keys[0]] : null);
-      const spotCode = (code && day[code]) ? code : keys[0];
+      const MINE_KEY = "cfdsemarang.mine.v1";
+      const rupiah = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
 
-      if (!booking) { $("#notFound").hidden = false; $("#ticketCard").hidden = true; return; }
+      function snapFor(spot, iso) {
+        try {
+          const m = JSON.parse(localStorage.getItem(MINE_KEY)) || {};
+          const e = (m[iso] || {})[spot] || (m[date] || {})[spot];
+          return (e && e.snap) || "";
+        } catch (e) { return ""; }
+      }
 
-      $("#tSpot").textContent = "Lapak " + spotCode;
-      $("#tCode").textContent = booking.code;
-      $("#tName").textContent = booking.name;
-      $("#tType").textContent = booking.type;
-      $("#tWa").textContent = booking.wa;
-      $("#tStatus").textContent = booking.status === "paid" ? "LUNAS" : "Menunggu pembayaran";
-      $("#tStatus").style.color = booking.status === "paid" ? "#2E7D32" : "#B22A1E";
-      if (date) {
-        const d = new Date(date + "T00:00:00");
-        const bulan = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+      function showNotFound(msg) {
+        $("#notFound").textContent = msg;
+        $("#notFound").hidden = false;
+        $("#ticketCard").hidden = true;
+      }
+
+      async function load() {
+        if (!code) {
+          showNotFound("Tautan tiket tidak lengkap. Buka tiket dari tautan yang diberikan setelah memesan.");
+          return;
+        }
+        let data;
+        try {
+          const r = await fetch(`/api/booking?code=${encodeURIComponent(code)}`, { headers: { accept: "application/json" } });
+          data = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            showNotFound(r.status === 404
+              ? "Booking tidak ditemukan. Periksa kode tiket atau hubungi admin."
+              : (data.error || "Gagal memuat tiket. Coba lagi."));
+            return;
+          }
+        } catch (e) {
+          showNotFound("Tidak bisa menghubungi server. Periksa koneksi lalu muat ulang halaman.");
+          return;
+        }
+
+        const b = data.booking;
+        $("#notFound").hidden = true;
+        $("#ticketCard").hidden = false;
+
+        $("#tSpot").textContent = "Lapak " + b.spot_code;
+        $("#tCode").textContent = b.code;
+        $("#tName").textContent = b.name;
+        $("#tType").textContent = b.business_type;
+        $("#tWa").textContent = b.wa_number;
+        $("#tPrice").textContent = rupiah(b.amount_idr);
+
+        const d = new Date(b.event_date + "T00:00:00");
         $("#tDate").textContent = d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+        const labels = {
+          paid: ["LUNAS", "#2E7D32", "Pembayaran lunas. Tunjukkan QR ini ke petugas saat check-in."],
+          pending: ["MENUNGGU PEMBAYARAN", "#B22A1E", "Status tiket diperbarui otomatis setelah pembayaran terverifikasi."],
+          cancelled: ["DIBATALKAN", "#8a8a8a", "Booking ini dibatalkan. Hubungi admin jika perlu bantuan."],
+          expired: ["KEDALUWARSA", "#8a8a8a", "Batas waktu pembayaran habis. Silakan pesan ulang."],
+        };
+        const [label, color, note] = labels[b.status] || ["—", "#B22A1E", ""];
+        $("#tStatus").textContent = label;
+        $("#tStatus").style.color = color;
+        $("#tDemo").textContent = note;
+
+        const snap = snapFor(b.spot_code, b.event_date);
+        if (b.status === "pending" && snap) {
+          $("#tPay").hidden = false;
+          $("#tPayLink").href = snap;
+        } else {
+          $("#tPay").hidden = true;
+        }
+
+        const qrBox = $("#qrBox");
+        qrBox.innerHTML = "";
+        if (typeof QRCode === "function") {
+          new QRCode(qrBox, { text: b.code, width: 148, height: 148, colorDark: "#111111", colorLight: "#ffffff" });
+        } else {
+          qrBox.textContent = "(QR gagal dimuat)";
+        }
       }
-      if (typeof QRCode === "function") {
-        new QRCode($("#qrBox"), { text: booking.code, width: 148, height: 148, colorDark: "#111111", colorLight: "#ffffff" });
-      } else {
-        $("#qrBox").textContent = "(QR gagal dimuat)";
-      }
+
+      $("#tRefresh").addEventListener("click", load);
+      load();
     })();
   </script>
 </body>

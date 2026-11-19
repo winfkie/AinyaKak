@@ -1,0 +1,3 @@
+# Salin ke .dev.vars lalu isi nilainya (jangan commit .dev.vars).
+MIDTRANS_SERVER_KEY=Mid-server-xxxxxxxxxxxxxxxxxxxx
+ADMIN_PIN=123456

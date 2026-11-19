@@ -1,5 +1,7 @@
-/* CFDSemarang — M1: peta interaktif + booking mock (localStorage, tanpa pembayaran).
- * M2 akan mengganti penyimpanan lokal dengan API Worker + D1 + Midtrans.
+/* CFDSemarang — peta interaktif + booking (M2: API Worker + D1 + Midtrans).
+ * Data ketersediaan lapak diambil dari /api/status; booking dikirim ke
+ * /api/book lalu pengunjung diarahkan ke halaman pembayaran QRIS Midtrans.
+ * Status "lunas" hanya bisa diubah webhook/admin di server.
  */
 (function () {
   "use strict";
@@ -18,16 +20,24 @@
     const bulan = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
     return `${hari}, ${d.getDate()} ${bulan[d.getMonth()]} ${d.getFullYear()}`;
   };
-  const rupiah = (n) => "Rp" + n.toLocaleString("id-ID");
+  const rupiah = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
 
-  /* ---------- state (mock store) ---------- */
-  const STORE_KEY = "cfdsemarang.bookings.v1";
-  function loadStore() {
-    try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+  /* ---------- state ---------- */
+  const MINE_KEY = "cfdsemarang.mine.v1";
+  function loadMine() {
+    try { return JSON.parse(localStorage.getItem(MINE_KEY)) || {}; }
     catch { return {}; }
   }
-  function saveStore(s) { localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
-  let store = loadStore();
+  let mine = loadMine();      // { date: { spot: { code, snap } } }
+  let takenMap = {};          // spot -> "paid" | "pending"
+  let statusErrorShown = false;
+
+  async function apiGet(path) {
+    const r = await fetch(path, { headers: { accept: "application/json" } });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    return data;
+  }
 
   /* ---------- sundays ---------- */
   function nextSundays(count) {
@@ -114,7 +124,7 @@
       b.innerHTML = `<span class="n">${d}</span><span class="s">${sub}</span>`;
       b.addEventListener("click", () => {
         currentDate = iso;
-        renderCalendar(); renderMap();
+        renderCalendar(); renderMap(); loadStatus(iso);
       });
       grid.appendChild(b);
     }
@@ -137,20 +147,19 @@
     const t = localIso(new Date());
     if (t !== todayCache) {
       todayCache = t;
-      currentDate = null;
       viewMonth = null;
       currentDate = defaultSunday();
-      renderCalendar(); renderMap();
+      renderCalendar(); renderMap(); loadStatus(currentDate);
     }
   }, 60000);
 
   /* ---------- spot status ---------- */
   function spotStatus(dateIso, code) {
-    const day = store[dateIso] || {};
-    const b = day[code];
-    if (!b) return "free";
-    if (b.demo) return "yours";
-    return b.status === "paid" ? "sold" : "pending";
+    if ((mine[dateIso] || {})[code]) return "yours";
+    const t = takenMap[code];
+    if (t === "paid") return "sold";
+    if (t === "pending") return "pending";
+    return "free";
   }
   function allSpots() {
     const list = [];
@@ -166,6 +175,26 @@
       }
     });
     return list;
+  }
+
+  /* ---------- data ketersediaan dari server ---------- */
+  async function loadStatus(dateIso) {
+    const wanted = dateIso;
+    try {
+      const data = await apiGet(`/api/status?date=${encodeURIComponent(dateIso)}`);
+      if (wanted !== currentDate) return; // pengguna sudah pindah Minggu
+      takenMap = data.taken || {};
+      statusErrorShown = false;
+      renderMap();
+    } catch (e) {
+      if (wanted !== currentDate) return;
+      takenMap = {};
+      renderMap();
+      if (!statusErrorShown) {
+        showToast("Gagal memuat status lapak. Periksa koneksi lalu muat ulang.");
+        statusErrorShown = true;
+      }
+    }
   }
 
   /* ---------- map ---------- */
@@ -246,7 +275,6 @@
 
   function openSpotPopup(s) {
     activeSpot = s;
-    const win = sundayWindow(currentDate);
     $("#popupZone").textContent = s.zone.name;
     $("#spotTitle").textContent = `Lapak ${s.code} · ${s.side}`;
     $("#spotDate").textContent = fmtDate(currentDate);
@@ -257,8 +285,10 @@
     const winOpen = sundayWindow(currentDate).state === "open";
     // Status milik sendiri/terisi tampil apa pun jendelanya — penting saat
     // Minggu HARI CFD (jendela tutup) supaya pemilik tetap melihat lapaknya.
+    const mineEntry = (mine[currentDate] || {})[s.code];
     if (st === "yours") {
-      stEl.textContent = "Pesanan kamu"; btn.disabled = true; btn.textContent = "Sudah kamu pesan ✓";
+      stEl.textContent = mineEntry && mineEntry.snap ? "Pesanan kamu · belum lunas" : "Pesanan kamu";
+      btn.disabled = true; btn.textContent = "Sudah kamu pesan ✓";
     } else if (st === "sold") {
       stEl.textContent = "Terisi"; btn.disabled = true; btn.textContent = "Sudah terisi";
     } else if (st === "pending") {
@@ -273,47 +303,73 @@
     $("#popupClose").focus();
   }
 
-  /* ---------- booking modal (mock) ---------- */
+  /* ---------- booking modal ---------- */
   function openBooking() {
     $("#bookSpotLabel").textContent = `${activeSpot.code} — ${fmtDate(currentDate)}`;
     $("#bookForm").reset();
+    $("#bookSubmit").disabled = false;
     $("#bookModal").hidden = false;
     $("#fName").focus();
   }
 
-  function makeCode(spot) {
-    const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-    return `CFS-${spot}-${rand}`;
-  }
-
-  $("#bookForm").addEventListener("submit", (e) => {
+  $("#bookForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    // Pengaman: jangan pernah menerima booking di luar jendela pemesanan.
+    // Pengaman: jangan pernah mengirim booking di luar jendela pemesanan.
     if (sundayWindow(currentDate).state !== "open") {
       showToast("Pemesanan untuk Minggu ini sudah ditutup (Sabtu 18.00 WIB).");
       return;
     }
-    const day = store[currentDate] || {};
-    const code = makeCode(activeSpot.code);
-    day[activeSpot.code] = {
-      code,
-      name: $("#fName").value.trim(),
-      type: $("#fType").value,
-      wa: $("#fWa").value.trim(),
-      status: "paid",       // mock — M2: pending → webhook → paid
-      demo: true,
-      createdAt: new Date().toISOString(),
-    };
-    store[currentDate] = day;
-    saveStore(store);
-    // Simpan referensi tiket terakhir — fallback kalau query string hilang
-    // karena redirect clean-URL pada beberapa server statis (serve, hosting).
-    localStorage.setItem("cfdsemarang.last.v1", JSON.stringify({ code, date: currentDate }));
-    $("#bookModal").hidden = true;
-    $("#spotPopup").hidden = true;
-    renderMap();
-    showToast("Demo M1 ✓ — e-tiket dibuka. Pembayaran QRIS nyata hadir di M2.");
-    location.href = `ticket.html?code=${encodeURIComponent(code)}&date=${currentDate}`;
+    const btn = $("#bookSubmit");
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = "Membuat pembayaran…";
+
+    try {
+      const r = await fetch("/api/book", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          date: currentDate,
+          spot: activeSpot.code,
+          name: $("#fName").value.trim(),
+          type: $("#fType").value,
+          wa: $("#fWa").value.trim(),
+        }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        showToast(data.error || "Booking gagal. Coba lagi.");
+        btn.disabled = false;
+        btn.textContent = "Lanjut bayar QRIS";
+        if (r.status === 409) loadStatus(currentDate);
+        return;
+      }
+
+      // Simpan referensi tiket + halaman bayar di perangkat ini.
+      mine[currentDate] = mine[currentDate] || {};
+      mine[currentDate][activeSpot.code] = {
+        code: data.code,
+        snap: (data.snap && data.snap.redirect_url) || "",
+      };
+      localStorage.setItem(MINE_KEY, JSON.stringify(mine));
+      localStorage.setItem("cfdsemarang.last.v1", JSON.stringify({ code: data.code, date: currentDate }));
+
+      $("#bookModal").hidden = true;
+      $("#spotPopup").hidden = true;
+      renderMap();
+
+      if (data.snap && data.snap.redirect_url) {
+        showToast("Mengarahkan ke pembayaran QRIS…");
+        location.href = data.snap.redirect_url;
+      } else {
+        showToast("Booking dibuat. Pembayaran menyusul — hubungi admin via WhatsApp.");
+        location.href = `ticket.html?code=${encodeURIComponent(data.code)}&date=${currentDate}`;
+      }
+    } catch (err) {
+      showToast("Tidak bisa menghubungi server. Periksa koneksi lalu coba lagi.");
+      btn.disabled = false;
+      btn.textContent = "Lanjut bayar QRIS";
+    }
   });
 
   /* ---------- toast ---------- */
@@ -352,4 +408,5 @@
   currentDate = defaultSunday();
   renderCalendar();
   renderMap();
+  loadStatus(currentDate);
 })();

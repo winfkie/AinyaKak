@@ -21,7 +21,7 @@
         <button type="submit" class="btn btn-primary btn-block">Masuk</button>
         <p class="small muted" id="gateError" hidden>PIN salah. Coba lagi.</p>
       </form>
-      <p class="small muted">M1: PIN sementara di <code>js/config.js</code>. Login nyata menyusul di M3.</p>
+      <p class="small muted">PIN diverifikasi di server. Sesi disimpan hanya di tab ini.</p>
     </div>
   </div>
 
@@ -58,6 +58,8 @@
             <option value="">Semua</option>
             <option value="paid">Lunas</option>
             <option value="pending">Menunggu</option>
+            <option value="cancelled">Batal</option>
+            <option value="expired">Kedaluwarsa</option>
           </select>
         </label>
         <label>Cari
@@ -76,8 +78,10 @@
               <th>Nama</th>
               <th>Jenis usaha</th>
               <th>WhatsApp</th>
+              <th>Biaya</th>
               <th>Status bayar</th>
               <th>Dipesan</th>
+              <th>Aksi</th>
             </tr>
           </thead>
           <tbody id="bookRows"></tbody>
@@ -86,8 +90,8 @@
       </div>
 
       <p class="note">
-        M1: data dibaca dari perangkat ini (mock, sebelum API + database aktif di M2).
-        Harga per spot: <span id="priceNote"></span>.
+        Data dibaca dari database D1 (semua perangkat). Harga per spot: <span id="priceNote"></span>.
+        Status lunas hanya berubah lewat pembayaran terverifikasi atau aksi admin di atas.
       </p>
     </section>
   </main>

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   amount_idr   INTEGER NOT NULL,              -- harga saat booking (backup dari config)
   status       TEXT NOT NULL DEFAULT 'pending', -- pending | paid | expired | cancelled
   payment_ref  TEXT,                          -- order_id Midtrans / QRIS
+  snap_url     TEXT,                          -- halaman pembayaran Snap (bisa dibuka ulang)
   paid_at      TEXT,                          -- ISO timestamp saat webhook paid
   created_at   TEXT NOT NULL DEFAULT (datetime('now')),
 
