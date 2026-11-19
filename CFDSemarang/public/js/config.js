@@ -16,7 +16,6 @@ window.CFDS = {
   closeDay: 6,        // 6 = Sabtu (JS getDay)
   closeHour: 18,      // 18.00 WIB
 
-  // PIN panel admin (M1 placeholder — login nyata + sesi server di M3).
-  // TODO(user): ganti PIN ini sebelum situs dipakai publik!
-  adminPin: "123456",
+  // PIN admin TIDAK ada di file ini — disimpan sebagai Worker secret
+  // (ADMIN_PIN) dan diverifikasi di server.
 };

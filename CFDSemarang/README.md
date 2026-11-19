@@ -91,7 +91,7 @@ cf workers secrets update ADMIN_PIN --text "PIN-baru-anda"
 Setelah deploy, atur **Payment Notification URL** di dashboard Midtrans ke:
 
 ```
-https://<worker>.<subdomain>.workers.dev/api/midtrans/webhook
+https://cfdsemarang.aidanrn06.workers.dev/api/midtrans/webhook
 ```
 
 ## Database (Cloudflare D1)
@@ -110,6 +110,15 @@ cf d1 query bb25fcac-c911-4f73-aaff-101b7ad68222 --sql "SELECT * FROM bookings"
 ```
 
 Tabel: `bookings` (unik per `spot_code + event_date`) dan `zone_prices`.
+
+### Upgrade skema pada database lama
+
+`CREATE TABLE IF NOT EXISTS` tidak menambah kolom ke tabel yang sudah ada. Kalau
+database dibuat sebelum kolom `snap_url` ada, jalankan sekali:
+
+```bash
+cf d1 query bb25fcac-c911-4f73-aaff-101b7ad68222 --sql "ALTER TABLE bookings ADD COLUMN snap_url TEXT"
+```
 
 ## Panel Admin
 
