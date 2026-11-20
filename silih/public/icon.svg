@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0F172A"/>
+  <path d="M256 118 L342 166 L342 248 L312 248 L312 394 L200 394 L200 248 L170 248 L170 166 Z" fill="#FFFFFF"/>
+  <rect x="222" y="132" width="68" height="68" rx="34" fill="#059669"/>
+  <text x="256" y="460" text-anchor="middle" font-family="Montserrat, Arial, sans-serif" font-size="52" font-weight="700" fill="#059669">SILIH</text>
+</svg>
