@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ticketix
 
-## Getting Started
+Marketplace C2C jual-beli tiket event dengan pembayaran QRIS (Midtrans Sandbox), dana tertahan (escrow), dan serah terima lewat surat kuasa atau e-ticket via email.
 
-First, run the development server:
+## Menjalankan di laptop
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. `npm install`
+2. Salin `.env.example` menjadi `.env.local`, lalu isi nilai dari Supabase dan Midtrans Sandbox.
+3. Jalankan `supabase/schema.sql` di Supabase → SQL Editor.
+4. `npm run dev` lalu buka http://localhost:3000
+
+Di localhost, halaman bayar mengecek status ke Midtrans setiap 4 detik, jadi pembayaran lewat simulator Sandbox tetap terdeteksi walaupun notifikasi Midtrans belum bisa menjangkau laptop.
+
+## Struktur penting
+
+| Path | Isi |
+| --- | --- |
+| `supabase/schema.sql` | Semua tabel, RLS, trigger profil, realtime, bucket storage |
+| `lib/midtrans.ts` | Charge QRIS, Get Transaction Status, verifikasi signature |
+| `lib/orders.ts` | Hitung biaya, proses status bayar (idempoten), pencairan & refund (simulasi) |
+| `app/api/checkout` | Membuat order + transaksi QRIS |
+| `app/api/midtrans/notifikasi` | Webhook notifikasi Midtrans |
+| `app/api/orders/[id]/aksi` | Unggah surat kuasa, tandai e-ticket terkirim, konfirmasi, laporkan, batalkan |
+| `app/pesanan/[id]` | Halaman detail pesanan (alur escrow) |
+| `app/admin` | Sengketa, biaya layanan, verifikasi pengguna |
+
+## Jadikan akun admin
+
+Setelah daftar di web, jalankan di SQL Editor:
+
+```sql
+update profiles set is_admin = true
+where id = (select id from auth.users where email = 'emailkamu@contoh.com');
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
