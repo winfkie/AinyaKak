@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8">{children}</main>
         <footer className="border-t border-zinc-200 bg-white">
           <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 text-sm text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
-            <p>© {new Date().getFullYear()} Ticketix — proyek tugas. Pembayaran memakai Midtrans Sandbox.</p>
+            <p>© {new Date().getFullYear()} Tiketemu — proyek tugas. Pembayaran memakai Midtrans Sandbox.</p>
             <nav className="flex gap-4">
               <Link href="/cara-kerja" className="hover:text-zinc-800">Cara Kerja</Link>
               <Link href="/faq" className="hover:text-zinc-800">FAQ</Link>
