@@ -32,7 +32,11 @@ E-tiket dengan QR terbit otomatis setelah pembayaran terverifikasi.
 ## Struktur
 
 ```
-src/index.js           API Worker: status, booking, webhook Midtrans, admin
+src/
+  index.js             API Worker: booking, Midtrans, admin, Instagram API
+  social/
+    crypto.js          enkripsi token Instagram (AES-GCM) untuk D1
+    instagram.js       helper OAuth/container/status/publish Graph API
 public/                situs (static assets)
   index.html           hero, kalender Minggu, peta, FAQ
   ticket.html          e-tiket (data dari API)
@@ -43,7 +47,12 @@ public/                situs (static assets)
   js/app.js            peta + booking (fetch API)
   js/admin.js          panel admin (fetch API + PIN server)
   assets/              lambang kota (SVG)
-db/schema.sql          skema D1 (bookings, zone_prices)
+db/schema.sql          skema D1 (bookings, zone_prices, ig_accounts, ig_media_jobs)
+media/
+  remotion/            scaffold Remotion
+  scripts/             ElevenLabs + FFmpeg + publish helper
+docs/
+  instagram-content-pipeline.md  setup akun IG, endpoint, alur Flow/Veo→publish
 cloudflare.config.ts   konfigurasi Worker: binding D1, secrets, routing /api/*
 wrangler.config.ts     build settings bundler Wrangler (direktori aset)
 wrangler.jsonc         dipakai hanya untuk perintah D1 lokal (`wrangler d1 execute`)
@@ -59,6 +68,13 @@ wrangler.jsonc         dipakai hanya untuk perintah D1 lokal (`wrangler d1 execu
 | POST | `/api/midtrans/webhook` | Notifikasi pembayaran (signature diverifikasi) |
 | GET | `/api/admin/bookings` | Daftar semua booking (header `x-admin-pin`) |
 | POST | `/api/admin/update` | Ubah status `{code, status}` (header `x-admin-pin`) |
+| GET | `/api/admin/instagram/auth/start` | URL OAuth Instagram (header `x-admin-pin`) |
+| GET | `/api/admin/instagram/callback` | Callback OAuth; simpan token terenkripsi di D1 |
+| GET | `/api/admin/instagram/status` | Status akun IG + jobs terbaru (header `x-admin-pin`) |
+| POST | `/api/admin/instagram/disconnect` | Putuskan akun IG (header `x-admin-pin`) |
+| POST | `/api/admin/instagram/publish` | Buat container Reels + publish (header `x-admin-pin`) |
+| GET | `/api/admin/instagram/jobs?code=...` | Cek/refresh job IG (header `x-admin-pin`) |
+| POST | `/api/admin/instagram/jobs/publish` | Publish container FINISHED (header `x-admin-pin`) |
 
 ## Menjalankan lokal
 
@@ -86,6 +102,9 @@ Rahasia di produksi disimpan sebagai Worker secret (bukan di file):
 ```bash
 cf workers secrets update MIDTRANS_SERVER_KEY --text "Mid-server-..."
 cf workers secrets update ADMIN_PIN --text "PIN-baru-anda"
+cf workers secrets update IG_APP_ID --type secret_text --text "<app-id>"
+cf workers secrets update IG_APP_SECRET --type secret_text --text "<app-secret>"
+cf workers secrets update IG_TOKEN_ENC_KEY --type secret_text --text "<random-long-string>"
 ```
 
 Setelah deploy, atur **Payment Notification URL** di dashboard Midtrans ke:
@@ -137,6 +156,14 @@ PIN diverifikasi di server lewat secret `ADMIN_PIN`, bukan di file publik.
 - **M3** — login admin (hash + sesi), harga per zona yang bisa diedit, domain produksi,
   Midtrans production + NPWP.
 
+## Instagram & Pipeline Konten (fondasi)
+
+Lihat [docs/instagram-content-pipeline.md](docs/instagram-content-pipeline.md) untuk:
+- checklist membuat akun Instagram Professional (Business/Creator),
+- setup Meta app + OAuth redirect/callback,
+- endpoint admin Instagram (`/api/admin/instagram/*`),
+- alur konten: **Google Labs Flow/Veo → Remotion → ElevenLabs → FFmpeg → publish IG**.
+
 ## TODO sebelum publik
 
 - [ ] Ganti `MIDTRANS_SERVER_KEY` dengan server key sandbox yang valid
@@ -146,6 +173,8 @@ PIN diverifikasi di server lewat secret `ADMIN_PIN`, bukan di file publik.
 - [ ] Aktifkan QRIS di akun Midtrans (butuh NPWP) atau pakai fallback manual
       (`ALLOW_MANUAL_FALLBACK=true` di `cloudflare.config.ts`).
 - [ ] Konfirmasi jadwal/jam CFD terbaru dari PPID Kota Semarang.
+- [ ] Buat akun Instagram Professional + Meta app, isi `IG_APP_ID/IG_APP_SECRET/IG_TOKEN_ENC_KEY`.
+- [ ] Set redirect URI Instagram ke `/api/admin/instagram/callback`.
 
 ## Kredit & legal
 

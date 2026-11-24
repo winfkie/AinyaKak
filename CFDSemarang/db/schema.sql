@@ -33,3 +33,40 @@ CREATE TABLE IF NOT EXISTS zone_prices (
 
 INSERT OR IGNORE INTO zone_prices (zone, price_idr) VALUES
   ('A', 25000), ('B', 25000), ('C', 25000), ('D', 25000);
+
+-- Akun Instagram Professional yang terhubung (satu akun aktif per instalasi).
+CREATE TABLE IF NOT EXISTS ig_accounts (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  ig_user_id      TEXT NOT NULL UNIQUE,       -- Instagram professional account ID
+  username        TEXT,                       -- @username untuk tampilan admin
+  account_type    TEXT,                       -- BUSINESS / CREATOR / unknown
+  token_enc       TEXT NOT NULL,              -- access token terenkripsi (AES-GCM)
+  token_type      TEXT NOT NULL DEFAULT 'bearer',
+  scopes          TEXT,                       -- ruang-dipisah / JSON scope yang diberikan
+  expires_at      TEXT,                       -- ISO timestamp kedaluwarsa token
+  connected_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Job publikasi konten ke Instagram (Reels/video).
+CREATE TABLE IF NOT EXISTS ig_media_jobs (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  job_code        TEXT NOT NULL UNIQUE,       -- IGJ-XXXX
+  ig_user_id      TEXT NOT NULL,              -- akun target
+  media_type      TEXT NOT NULL DEFAULT 'REELS',
+  video_url       TEXT NOT NULL,              -- URL publik video (diambil Meta)
+  caption         TEXT,
+  cover_url       TEXT,                       -- opsional thumbnail/cover
+  share_to_feed   INTEGER NOT NULL DEFAULT 1, -- 1=true
+  status          TEXT NOT NULL DEFAULT 'created', -- created|container_created|processing|finished|published|error
+  container_id    TEXT,                       -- creation_id Instagram
+  media_id        TEXT,                       -- IG media ID setelah publish
+  error_message   TEXT,
+  payload_json    TEXT,                       -- metadata/debug (tanpa token)
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  published_at    TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_ig_jobs_status ON ig_media_jobs (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ig_jobs_user   ON ig_media_jobs (ig_user_id, created_at DESC);

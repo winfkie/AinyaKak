@@ -5,3 +5,14 @@ dist/
 .dev.vars
 *.log
 .DS_Store
+
+# Pipeline media (Remotion/FFmpeg/ElevenLabs/Google Flow)
+media/remotion/node_modules/
+media/remotion/out/
+media/remotion/.env
+media/out/
+media/scripts/.env
+*.mp4
+*.mp3
+*.wav
+*.webm

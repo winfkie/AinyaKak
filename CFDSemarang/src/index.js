@@ -1,11 +1,24 @@
-/* CFDSemarang — API Worker (M2).
- * Pemesanan lapak + pembayaran QRIS lewat Midtrans Snap (sandbox/production
- * dipilih dengan env.MIDTRANS_PRODUCTION). Hanya /api/* yang masuk ke sini;
- * sisanya dilayani static assets.
+/* CFDSemarang — API Worker (M2+social foundation).
+ * Pemesanan lapak + pembayaran QRIS lewat Midtrans Snap.
+ * Fondasi Instagram Graph API: OAuth akun profesional, simpan token terenkripsi
+ * di D1, buat container Reels, cek status, publish. Hanya /api/* masuk sini.
  *
- * Status booking hanya berubah lewat webhook Midtrans terverifikasi atau
- * aksi admin. Klien tidak pernah bisa menandai "paid" sendiri.
+ * Status booking hanya berubah lewat webhook Midtrans terverifikasi atau aksi admin.
  */
+
+import { encryptToken, decryptToken } from "./social/crypto.js";
+import {
+  igAppConfig,
+  buildAuthUrl,
+  exchangeCodeForShortToken,
+  exchangeForLongLivedToken,
+  refreshLongLivedToken,
+  fetchMe,
+  createVideoContainer,
+  getContainerStatus,
+  publishContainer,
+  getMedia,
+} from "./social/instagram.js";
 
 const WIB_OFFSET = 7 * 3600 * 1000;
 const DAY = 86400 * 1000;
@@ -152,6 +165,55 @@ function adminOk(request, env) {
   const pin = request.headers.get("x-admin-pin") || "";
   const expected = env.ADMIN_PIN || "";
   return expected.length > 0 && pin === expected;
+}
+
+function cleanUrl(v, max = 1000) {
+  const s = cleanText(v, max);
+  if (!s) return "";
+  try {
+    const u = new URL(s);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return "";
+    return u.toString();
+  } catch {
+    return "";
+  }
+}
+
+function jobCode() {
+  return `IGJ-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+}
+
+async function signState(env, payload) {
+  const secret = String(env.IG_TOKEN_ENC_KEY || env.ADMIN_PIN || "");
+  if (!secret) throw new Error("IG_TOKEN_ENC_KEY atau ADMIN_PIN belum diset untuk state OAuth");
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const body = btoa(JSON.stringify(payload)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  const sigBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
+  const sig = [...new Uint8Array(sigBuf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${body}.${sig}`;
+}
+
+async function verifyState(env, state) {
+  const [body, sig] = String(state || "").split(".");
+  if (!body || !sig) return null;
+  const secret = String(env.IG_TOKEN_ENC_KEY || env.ADMIN_PIN || "");
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sigBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
+  const expected = [...new Uint8Array(sigBuf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  if (expected !== sig) return null;
+  try {
+    const json = JSON.parse(atob(body.replace(/-/g, "+").replace(/_/g, "/")));
+    if (!json || typeof json.exp !== "number" || Date.now() > json.exp) return null;
+    return json;
+  } catch {
+    return null;
+  }
+}
+
+function htmlPage(title, body) {
+  return new Response(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;line-height:1.5;color:#111}code,pre{background:#f5f5f5;padding:2px 4px;border-radius:4px}pre{padding:12px;overflow:auto}.ok{color:#1b7f3a}.err{color:#b3261e}</style><h1>${title}</h1>${body}`, {
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+  });
 }
 
 /* ---------- handler ---------- */
@@ -340,6 +402,238 @@ async function adminUpdate(request, env) {
   return json({ ok: true, code, status });
 }
 
+/* ---------- Instagram admin ---------- */
+
+async function getActiveIgAccount(env) {
+  return env.DB.prepare(
+    `SELECT id, ig_user_id, username, account_type, token_enc, token_type, scopes, expires_at, connected_at, updated_at
+       FROM ig_accounts ORDER BY updated_at DESC, id DESC LIMIT 1`
+  ).first();
+}
+
+async function saveIgAccount(env, { igUserId, username, accountType, token, tokenType, scopes, expiresIn }) {
+  const tokenEnc = await encryptToken(env, token);
+  const expiresAt = expiresIn ? new Date(Date.now() + Number(expiresIn) * 1000).toISOString() : null;
+  await env.DB.prepare(
+    `INSERT INTO ig_accounts (ig_user_id, username, account_type, token_enc, token_type, scopes, expires_at, connected_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+     ON CONFLICT(ig_user_id) DO UPDATE SET
+       username=excluded.username,
+       account_type=excluded.account_type,
+       token_enc=excluded.token_enc,
+       token_type=excluded.token_type,
+       scopes=excluded.scopes,
+       expires_at=excluded.expires_at,
+       updated_at=datetime('now')`
+  ).bind(igUserId, username || "", accountType || "", tokenEnc, tokenType || "bearer", scopes || "", expiresAt).run();
+  return { igUserId, username, accountType, expiresAt };
+}
+
+async function igAuthStart(request, env) {
+  if (!adminOk(request, env)) return fail("PIN salah", 401);
+  const origin = new URL(request.url).origin;
+  const state = await signState(env, { exp: Date.now() + 10 * 60 * 1000, nonce: crypto.randomUUID() });
+  const { url, cfg } = buildAuthUrl(env, origin, state);
+  return json({ ok: true, auth_url: url, redirect_uri: cfg.redirectUri, scopes: cfg.scopes });
+}
+
+async function igAuthCallback(request, env) {
+  const url = new URL(request.url);
+  const err = url.searchParams.get("error");
+  const errDesc = url.searchParams.get("error_description") || url.searchParams.get("error_reason") || "";
+  if (err) return htmlPage("Instagram OAuth gagal", `<p class="err">Instagram mengembalikan error: <code>${cleanText(err, 80)}</code></p><p>${cleanText(errDesc, 300)}</p>`);
+  const code = cleanText(url.searchParams.get("code"), 500);
+  const state = url.searchParams.get("state") || "";
+  const stateOk = await verifyState(env, state);
+  if (!code || !stateOk) return htmlPage("Instagram OAuth gagal", `<p class="err">State OAuth tidak valid atau kedaluwarsa. Ulangi dari panel admin.</p>`);
+  try {
+    const origin = url.origin;
+    const short = await exchangeCodeForShortToken(env, origin, code);
+    const long = await exchangeForLongLivedToken(env, short.accessToken);
+    const me = await fetchMe(long.accessToken);
+    const igUserId = me.igUserId || short.userId;
+    if (!igUserId) throw new Error("Instagram user_id tidak ditemukan");
+    const saved = await saveIgAccount(env, {
+      igUserId,
+      username: me.username,
+      accountType: me.accountType,
+      token: long.accessToken,
+      tokenType: long.tokenType,
+      scopes: igAppConfig(env, origin).scopes,
+      expiresIn: long.expiresIn,
+    });
+    return htmlPage("Instagram terhubung", `<p class="ok">Akun Instagram berhasil dihubungkan.</p><pre>${cleanText(JSON.stringify({ ig_user_id: saved.igUserId, username: saved.username, account_type: saved.accountType, expires_at: saved.expiresAt }, null, 2), 2000)}</pre><p>Kamu bisa menutup tab ini dan kembali ke panel admin.</p>`);
+  } catch (e) {
+    return htmlPage("Instagram OAuth gagal", `<p class="err">${cleanText(e && e.message ? e.message : String(e), 500)}</p><p>Pastikan akun Instagram adalah Professional (Business/Creator), terhubung ke app Meta, dan redirect URI cocok.</p>`);
+  }
+}
+
+async function igStatus(request, env) {
+  if (!adminOk(request, env)) return fail("PIN salah", 401);
+  const acct = await getActiveIgAccount(env);
+  let jobs = { results: [] };
+  try {
+    jobs = await env.DB.prepare(
+      `SELECT job_code, ig_user_id, media_type, video_url, caption, status, container_id, media_id, error_message, created_at, updated_at, published_at
+         FROM ig_media_jobs ORDER BY created_at DESC LIMIT 20`
+    ).all();
+  } catch {}
+  return json({
+    ok: true,
+    account: acct ? {
+      ig_user_id: acct.ig_user_id,
+      username: acct.username,
+      account_type: acct.account_type,
+      scopes: acct.scopes,
+      expires_at: acct.expires_at,
+      connected_at: acct.connected_at,
+      updated_at: acct.updated_at,
+    } : null,
+    jobs: jobs.results || [],
+    config: {
+      has_app_id: Boolean(env.IG_APP_ID),
+      has_app_secret: Boolean(env.IG_APP_SECRET),
+      has_token_enc_key: Boolean(env.IG_TOKEN_ENC_KEY),
+      redirect_uri: igAppConfig(env, new URL(request.url).origin).redirectUri,
+      scopes: igAppConfig(env, new URL(request.url).origin).scopes,
+    },
+  });
+}
+
+async function igDisconnect(request, env) {
+  if (!adminOk(request, env)) return fail("PIN salah", 401);
+  await env.DB.prepare("DELETE FROM ig_accounts").run();
+  return json({ ok: true, disconnected: true });
+}
+
+async function igPublish(request, env) {
+  if (!adminOk(request, env)) return fail("PIN salah", 401);
+  let body;
+  try { body = await request.json(); } catch { return fail("Body JSON tidak valid"); }
+  const videoUrl = cleanUrl(body.video_url, 1000);
+  if (!videoUrl) return fail("video_url HTTPS wajib diisi");
+  const caption = cleanText(body.caption, 2200);
+  const coverUrl = cleanUrl(body.cover_url, 1000) || null;
+  const shareToFeed = body.share_to_feed !== false;
+  const mediaType = cleanText(body.media_type, 20).toUpperCase() === "VIDEO" ? "VIDEO" : "REELS";
+
+  const acct = await getActiveIgAccount(env);
+  if (!acct) return fail("Belum ada akun Instagram terhubung", 409);
+  let token;
+  try { token = await decryptToken(env, acct.token_enc); }
+  catch (e) { return fail("Token Instagram tidak bisa dibaca: " + (e && e.message ? e.message : e), 500); }
+
+  const code = jobCode();
+  await env.DB.prepare(
+    `INSERT INTO ig_media_jobs (job_code, ig_user_id, media_type, video_url, caption, cover_url, share_to_feed, status, payload_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'created', ?)`
+  ).bind(code, acct.ig_user_id, mediaType, videoUrl, caption, coverUrl, shareToFeed ? 1 : 0, JSON.stringify({ source: "admin_api" })).run();
+
+  try {
+    const container = await createVideoContainer(token, acct.ig_user_id, { videoUrl, caption, coverUrl: coverUrl || undefined, shareToFeed, mediaType });
+    const containerId = String(container.id || "");
+    if (!containerId) throw new Error("Container ID tidak diterima dari Instagram");
+    await env.DB.prepare("UPDATE ig_media_jobs SET status='container_created', container_id=?, updated_at=datetime('now') WHERE job_code=?")
+      .bind(containerId, code).run();
+
+    let status = "container_created";
+    let lastStatus = null;
+    for (let i = 0; i < 12; i++) {
+      await new Promise((r) => setTimeout(r, 3000));
+      const st = await getContainerStatus(token, containerId);
+      lastStatus = st;
+      const sc = String(st.status_code || "").toUpperCase();
+      if (sc === "FINISHED") { status = "finished"; break; }
+      if (sc === "ERROR" || sc === "EXPIRED") {
+        const msg = cleanText(st.status || sc, 500);
+        await env.DB.prepare("UPDATE ig_media_jobs SET status='error', error_message=?, payload_json=?, updated_at=datetime('now') WHERE job_code=?")
+          .bind(msg, JSON.stringify(st), code).run();
+        return fail("Instagram menolak media: " + msg, 502);
+      }
+      await env.DB.prepare("UPDATE ig_media_jobs SET status='processing', payload_json=?, updated_at=datetime('now') WHERE job_code=?")
+        .bind(JSON.stringify(st), code).run();
+    }
+    if (status !== "finished") {
+      await env.DB.prepare("UPDATE ig_media_jobs SET status='processing', payload_json=?, updated_at=datetime('now') WHERE job_code=?")
+        .bind(JSON.stringify(lastStatus || { note: "timeout_waiting_finish" }), code).run();
+      return json({ ok: true, job_code: code, container_id: containerId, status: "processing", message: "Container masih diproses Instagram. Cek status job lagi beberapa saat lalu publish." });
+    }
+
+    const pub = await publishContainer(token, acct.ig_user_id, containerId);
+    const mediaId = String(pub.id || "");
+    let permalink = "";
+    try { const m = await getMedia(token, mediaId); permalink = m.permalink || ""; } catch {}
+    await env.DB.prepare("UPDATE ig_media_jobs SET status='published', media_id=?, payload_json=?, published_at=datetime('now'), updated_at=datetime('now') WHERE job_code=?")
+      .bind(mediaId, JSON.stringify({ published: pub, permalink }), code).run();
+    return json({ ok: true, job_code: code, container_id: containerId, media_id: mediaId, permalink, status: "published" });
+  } catch (e) {
+    const msg = cleanText(e && e.message ? e.message : String(e), 500);
+    await env.DB.prepare("UPDATE ig_media_jobs SET status='error', error_message=?, updated_at=datetime('now') WHERE job_code=?")
+      .bind(msg, code).run();
+    return fail(msg, 502);
+  }
+}
+
+async function igJobs(request, env) {
+  if (!adminOk(request, env)) return fail("PIN salah", 401);
+  const url = new URL(request.url);
+  const code = cleanText(url.searchParams.get("code"), 60);
+  if (code) {
+    const row = await env.DB.prepare("SELECT * FROM ig_media_jobs WHERE job_code=?").bind(code).first();
+    if (!row) return fail("Job tidak ditemukan", 404);
+    if (row.container_id && row.status !== "published" && row.status !== "error") {
+      const acct = await getActiveIgAccount(env);
+      if (acct) {
+        try {
+          const token = await decryptToken(env, acct.token_enc);
+          const st = await getContainerStatus(token, row.container_id);
+          const sc = String(st.status_code || "").toUpperCase();
+          const next = sc === "FINISHED" ? "finished" : sc === "ERROR" || sc === "EXPIRED" ? "error" : "processing";
+          await env.DB.prepare("UPDATE ig_media_jobs SET status=?, payload_json=?, error_message=?, updated_at=datetime('now') WHERE job_code=?")
+            .bind(next, JSON.stringify(st), sc === "ERROR" || sc === "EXPIRED" ? cleanText(st.status || sc, 500) : row.error_message, code).run();
+          row.status = next;
+          row.payload_json = JSON.stringify(st);
+        } catch {}
+      }
+    }
+    return json({ ok: true, job: row });
+  }
+  const { results } = await env.DB.prepare(
+    `SELECT job_code, ig_user_id, media_type, video_url, caption, status, container_id, media_id, error_message, created_at, updated_at, published_at
+       FROM ig_media_jobs ORDER BY created_at DESC LIMIT 50`
+  ).all();
+  return json({ ok: true, jobs: results || [] });
+}
+
+async function igPublishJob(request, env) {
+  if (!adminOk(request, env)) return fail("PIN salah", 401);
+  let body;
+  try { body = await request.json(); } catch { return fail("Body JSON tidak valid"); }
+  const code = cleanText(body.job_code, 60);
+  if (!code) return fail("job_code wajib diisi");
+  const row = await env.DB.prepare("SELECT * FROM ig_media_jobs WHERE job_code=?").bind(code).first();
+  if (!row) return fail("Job tidak ditemukan", 404);
+  if (row.status === "published") return json({ ok: true, job_code: code, status: "published", media_id: row.media_id });
+  if (!row.container_id) return fail("Job belum punya container_id", 409);
+  const acct = await getActiveIgAccount(env);
+  if (!acct) return fail("Belum ada akun Instagram terhubung", 409);
+  try {
+    const token = await decryptToken(env, acct.token_enc);
+    const st = await getContainerStatus(token, row.container_id);
+    const sc = String(st.status_code || "").toUpperCase();
+    if (sc !== "FINISHED") return json({ ok: false, job_code: code, status: sc || row.status, message: "Container belum FINISHED" }, 409);
+    const pub = await publishContainer(token, acct.ig_user_id, row.container_id);
+    const mediaId = String(pub.id || "");
+    let permalink = "";
+    try { const m = await getMedia(token, mediaId); permalink = m.permalink || ""; } catch {}
+    await env.DB.prepare("UPDATE ig_media_jobs SET status='published', media_id=?, payload_json=?, published_at=datetime('now'), updated_at=datetime('now') WHERE job_code=?")
+      .bind(mediaId, JSON.stringify({ published: pub, permalink }), code).run();
+    return json({ ok: true, job_code: code, media_id: mediaId, permalink, status: "published" });
+  } catch (e) {
+    return fail(e && e.message ? e.message : String(e), 502);
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -355,6 +649,15 @@ export default {
       if (path === "/api/midtrans/webhook" && request.method === "POST") return await webhook(request, env);
       if (path === "/api/admin/bookings" && request.method === "GET") return await adminList(request, env);
       if (path === "/api/admin/update" && request.method === "POST") return await adminUpdate(request, env);
+
+      // Instagram (fondasi) — admin-only kecuali callback OAuth.
+      if (path === "/api/admin/instagram/auth/start" && request.method === "GET") return await igAuthStart(request, env);
+      if (path === "/api/admin/instagram/callback" && request.method === "GET") return await igAuthCallback(request, env);
+      if (path === "/api/admin/instagram/status" && request.method === "GET") return await igStatus(request, env);
+      if (path === "/api/admin/instagram/disconnect" && request.method === "POST") return await igDisconnect(request, env);
+      if (path === "/api/admin/instagram/publish" && request.method === "POST") return await igPublish(request, env);
+      if (path === "/api/admin/instagram/jobs" && request.method === "GET") return await igJobs(request, env);
+      if (path === "/api/admin/instagram/jobs/publish" && request.method === "POST") return await igPublishJob(request, env);
       return fail("Endpoint tidak dikenal", 404);
     } catch (e) {
       return fail("Kesalahan server: " + (e && e.message ? e.message : String(e)), 500);

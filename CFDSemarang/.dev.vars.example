@@ -1,3 +1,15 @@
 # Salin ke .dev.vars lalu isi nilainya (jangan commit .dev.vars).
 MIDTRANS_SERVER_KEY=Mid-server-xxxxxxxxxxxxxxxxxxxx
 ADMIN_PIN=123456
+
+# Instagram Graph API (akun Professional Business/Creator)
+IG_APP_ID=
+IG_APP_SECRET=
+IG_TOKEN_ENC_KEY=isi-string-acak-panjang-untuk-enkripsi-token-d1
+# Opsional: kosongkan untuk default <origin>/api/admin/instagram/callback
+IG_REDIRECT_URI=
+IG_SCOPES=instagram_business_basic,instagram_business_content_publish
+
+# Pipeline konten lokal (jangan commit .env media)
+# ELEVENLABS_API_KEY=...
+# ELEVENLABS_VOICE_ID=...

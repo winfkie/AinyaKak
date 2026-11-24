@@ -26,6 +26,13 @@ export default defineConfig({
       // Kalau Midtrans gagal, booking tetap dicatat sebagai pending agar bisa
       // dikonfirmasi manual oleh admin. Set "false" untuk menolak booking.
       ALLOW_MANUAL_FALLBACK: bindings.text("true"),
+
+      // Instagram Graph API / content publishing (akun Professional).
+      IG_APP_ID: bindings.secret(),
+      IG_APP_SECRET: bindings.secret(),
+      IG_TOKEN_ENC_KEY: bindings.secret(), // kunci enkripsi token di D1
+      IG_REDIRECT_URI: bindings.text(""),  // opsional; default: <origin>/api/admin/instagram/callback
+      IG_SCOPES: bindings.text("instagram_business_basic,instagram_business_content_publish"),
     },
   },
 });
