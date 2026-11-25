@@ -46,7 +46,7 @@ export const CfdPromo: React.FC<z.infer<typeof cfdPromoSchema>> = ({ title, subt
         <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", padding: 72, textAlign: "center", opacity: finalProgress }}>
           <div style={{ transform: `translateY(${finalY}px)`, width: "100%" }}>
             <div style={{ fontSize: 28, letterSpacing: 4, color: "#F9D908", marginBottom: 24 }}>CFD SEMARANG</div>
-            <h1 style={{ fontSize: 64, lineHeight: 1.1, margin: "0 auto 36px", maxWidth: 900 }}>{finalText}</h1>
+            <h1 style={{ fontSize: 64, lineHeight: 1.1, margin: "0 auto 36px", maxWidth: 900, whiteSpace: "pre-wrap" }}>{finalText}</h1>
             <div
               style={{
                 display: "inline-block",
@@ -57,7 +57,7 @@ export const CfdPromo: React.FC<z.infer<typeof cfdPromoSchema>> = ({ title, subt
                 transform: `scale(${qrScale})`,
               }}
             >
-              <Img src={QR_SRC} style={{ width: 520, height: 520, display: "block" }} />
+              <Img src={QR_SRC} alt="QR code ke situs CFDSemarang" style={{ width: 520, height: 520, display: "block" }} />
             </div>
             <div style={{ marginTop: 28, fontSize: 30, color: "#f2f2f2", letterSpacing: 0.5 }}>Scan untuk booking</div>
             <div style={{ marginTop: 8, fontSize: 24, color: "#F9D908", wordBreak: "break-all" }}>{QR_LABEL}</div>

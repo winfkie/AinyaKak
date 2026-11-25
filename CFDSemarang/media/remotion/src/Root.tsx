@@ -16,7 +16,7 @@ export const Root: React.FC = () => {
           title: "CFD Semarang",
           subtitle: "Booking lapak 3x3 m tanpa ribet",
           cta: "Pilih Minggu • Pilih Lapak • Bayar QRIS",
-          finalText: "amankan tempatmu sekarang!",
+          finalText: "amankan  tempatmu sekarang!",
         }}
       />
     </>

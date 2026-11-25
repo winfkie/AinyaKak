@@ -49,7 +49,7 @@ curl -X POST https://cfdsemarang.aidanrn06.workers.dev/api/admin/instagram/publi
 
 ### B. Remotion (komposisi)
 Template `CfdPromo` berdurasi 22 detik. Scene terakhir menampilkan teks
-`amankan tempatmu sekarang!` dan QR code ke situs CFDSemarang
+`amankan  tempatmu sekarang!` dan QR code ke situs CFDSemarang
 (`public/qr-cfdsemarang.svg`) agar penonton bisa langsung scan.
 
 ```bash
