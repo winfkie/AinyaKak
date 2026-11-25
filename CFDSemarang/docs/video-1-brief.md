@@ -1,7 +1,7 @@
 # Video #1 Brief — CFDSemarang
 
-**Status:** Draft untuk approval  
-**Target publish:** Stretch besok (tergantung OAuth/R2/assets/VO siap)  
+**Status:** Approved (2026-11-25)  
+**Target publish:** Stretch besok (tergantung R2/assets/VO siap)  
 **Format:** Reels vertikal 9:16, 1080×1920, 30fps, 22 detik  
 **Tujuan:** Ajak pedagang/UMKM amankan lapak CFD Semarang minggu ini.
 
@@ -55,7 +55,7 @@ Prioritas aset berlisensi jelas / buatan sendiri / stock dengan lisensi komersia
 
 ## Produksi
 
-1. **Script/brief ini** — butuh approval user. ✅/pending
+1. **Script/brief ini** — approved oleh user (2026-11-25). ✅
 2. **Kumpulkan aset** — browser sourcing, cek lisensi.
 3. **Voiceover** — ElevenLabs, suara pria muda santai; render setelah script final.
 4. **Remotion render** — gunakan `media/remotion/src/CfdPromo.tsx` sebagai base; tambahkan b-roll/VO/music sesuai aset final.
