@@ -29,6 +29,7 @@
         <div><dt>Nama</dt><dd id="tName">—</dd></div>
         <div><dt>Jenis usaha</dt><dd id="tType">—</dd></div>
         <div><dt>WhatsApp</dt><dd id="tWa">—</dd></div>
+        <div><dt>Metode bayar</dt><dd id="tMethod">—</dd></div>
         <div><dt>Biaya</dt><dd id="tPrice">—</dd></div>
         <div><dt>Status</dt><dd id="tStatus">—</dd></div>
       </dl>
@@ -38,7 +39,7 @@
       </p>
 
       <p class="small muted" id="tPay" hidden>
-        Pembayaran belum selesai.
+        <span id="tPayMsg">Pembayaran belum selesai.</span>
         <a href="#" id="tPayLink" target="_blank" rel="noopener">Buka halaman pembayaran QRIS</a>
       </p>
 
@@ -128,10 +129,23 @@
         $("#tStatus").style.color = color;
         $("#tDemo").textContent = note;
 
-        const snap = snapFor(b.spot_code, b.event_date);
-        if (b.status === "pending" && snap) {
+        const snap = snapFor(b.spot_code, b.event_date) || b.snap_url || "";
+        const waAdmin = "https://wa.me/" + (window.CFDS && CFDS.waMeNumber ? CFDS.waMeNumber : "6281232793825");
+        if (b.status === "pending" && b.payment_method === "transfer") {
           $("#tPay").hidden = false;
+          $("#tPayMsg").textContent = "Pembayaran transfer manual belum dikonfirmasi. ";
+          $("#tPayLink").textContent = "Konfirmasi transfer via WhatsApp";
+          $("#tPayLink").href = waAdmin + "?text=" + encodeURIComponent(`Halo admin CFDSemarang, saya mau konfirmasi transfer untuk booking ${b.code} (lapak ${b.spot_code}, ${b.event_date}, ${b.name}, ${rupiah(b.amount_idr)}).`);
+        } else if (b.status === "pending" && snap) {
+          $("#tPay").hidden = false;
+          $("#tPayMsg").textContent = "Pembayaran belum selesai. ";
+          $("#tPayLink").textContent = "Buka halaman pembayaran QRIS";
           $("#tPayLink").href = snap;
+        } else if (b.status === "pending") {
+          $("#tPay").hidden = false;
+          $("#tPayMsg").textContent = "Pembayaran belum selesai. ";
+          $("#tPayLink").textContent = "Hubungi admin via WhatsApp";
+          $("#tPayLink").href = waAdmin + "?text=" + encodeURIComponent("Halo admin CFDSemarang, saya mau bantuan pembayaran untuk booking " + b.code);
         } else {
           $("#tPay").hidden = true;
         }

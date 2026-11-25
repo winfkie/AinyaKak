@@ -296,7 +296,7 @@
     } else if (!winOpen) {
       stEl.textContent = "Pemesanan ditutup — buka Senin"; btn.disabled = true; btn.textContent = "Belum buka";
     } else {
-      stEl.textContent = "Tersedia"; btn.disabled = false; btn.textContent = "Pilih lapak ini?";
+      stEl.textContent = "Tersedia"; btn.disabled = false; btn.textContent = "Pilih tempat ini";
     }
     $("#askWaBtn").href = waLink(s.code);
     $("#spotPopup").hidden = false;
@@ -314,15 +314,15 @@
 
   $("#bookForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    // Pengaman: jangan pernah mengirim booking di luar jendela pemesanan.
     if (sundayWindow(currentDate).state !== "open") {
       showToast("Pemesanan untuk Minggu ini sudah ditutup (Sabtu 18.00 WIB).");
       return;
     }
     const btn = $("#bookSubmit");
     if (btn.disabled) return;
+    const paymentMethod = ($("#bookForm input[name='payment_method']:checked") || {}).value || "qris";
     btn.disabled = true;
-    btn.textContent = "Membuat pembayaran…";
+    btn.textContent = paymentMethod === "transfer" ? "Membuat pesanan…" : "Membuat pembayaran…";
 
     try {
       const r = await fetch("/api/book", {
@@ -334,22 +334,23 @@
           name: $("#fName").value.trim(),
           type: $("#fType").value,
           wa: $("#fWa").value.trim(),
+          payment_method: paymentMethod,
         }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
         showToast(data.error || "Booking gagal. Coba lagi.");
         btn.disabled = false;
-        btn.textContent = "Lanjut bayar QRIS";
+        btn.textContent = "Buat pesanan";
         if (r.status === 409) loadStatus(currentDate);
         return;
       }
 
-      // Simpan referensi tiket + halaman bayar di perangkat ini.
       mine[currentDate] = mine[currentDate] || {};
       mine[currentDate][activeSpot.code] = {
         code: data.code,
         snap: (data.snap && data.snap.redirect_url) || "",
+        payment_method: data.payment_method || paymentMethod,
       };
       localStorage.setItem(MINE_KEY, JSON.stringify(mine));
       localStorage.setItem("cfdsemarang.last.v1", JSON.stringify({ code: data.code, date: currentDate }));
@@ -358,19 +359,121 @@
       $("#spotPopup").hidden = true;
       renderMap();
 
-      if (data.snap && data.snap.redirect_url) {
-        showToast("Mengarahkan ke pembayaran QRIS…");
-        location.href = data.snap.redirect_url;
-      } else {
-        showToast("Booking dibuat. Pembayaran menyusul — hubungi admin via WhatsApp.");
-        location.href = `ticket.html?code=${encodeURIComponent(data.code)}&date=${currentDate}`;
+      if (data.payment_method === "qris" && data.snap && data.snap.redirect_url) {
+        showToast(data.qris_fallback ? "QRIS gagal, dialihkan ke transfer manual." : "Mengarahkan ke pembayaran QRIS…");
+        if (!data.qris_fallback) {
+          location.href = data.snap.redirect_url;
+          return;
+        }
       }
+      if (data.qris_fallback) {
+        showToast("QRIS gagal dibuat. Booking dicatat, lanjut transfer manual via WhatsApp.");
+      } else if (data.payment_method === "transfer") {
+        showToast("Booking dibuat. Silakan konfirmasi transfer manual via WhatsApp.");
+      } else {
+        showToast("Booking dibuat. Cek detail pesananmu.");
+      }
+      location.href = `ticket.html?code=${encodeURIComponent(data.code)}&date=${currentDate}`;
     } catch (err) {
       showToast("Tidak bisa menghubungi server. Periksa koneksi lalu coba lagi.");
       btn.disabled = false;
-      btn.textContent = "Lanjut bayar QRIS";
+      btn.textContent = "Buat pesanan";
     }
   });
+
+  /* ---------- cek pesanan ---------- */
+  const statusLabel = {
+    paid: "Lunas",
+    pending: "Menunggu pembayaran",
+    expired: "Kedaluwarsa",
+    cancelled: "Dibatalkan",
+  };
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function renderCheckResult(b) {
+    const status = b.status || "pending";
+    const label = statusLabel[status] || status;
+    const method = b.payment_method === "transfer" ? "Transfer manual" : "QRIS";
+    const payBtn = status === "pending" && b.payment_method !== "transfer" && b.snap_url
+      ? `<a class="btn btn-primary" href="${esc(b.snap_url)}" target="_blank" rel="noopener">Lanjut bayar QRIS</a>`
+      : "";
+    const waText = encodeURIComponent(
+      `Halo admin CFDSemarang, saya mau konfirmasi pembayaran transfer untuk booking ${b.code} (lapak ${b.spot_code}, ${b.event_date}, ${b.name}, ${rupiah(b.amount_idr)}).`
+    );
+    const wa = `https://wa.me/${CFG.waMeNumber}?text=${waText}`;
+    const transferBtn = status === "pending" && b.payment_method === "transfer"
+      ? `<a class="btn btn-wa" href="${wa}" target="_blank" rel="noopener">Konfirmasi transfer via WhatsApp</a>`
+      : `<a class="btn btn-wa" href="https://wa.me/${CFG.waMeNumber}?text=${encodeURIComponent(`Halo admin CFDSemarang, saya mau tanya soal pesanan ${b.code}.`)}" target="_blank" rel="noopener">Hubungi admin</a>`;
+    const transferNote = status === "pending" && b.payment_method === "transfer"
+      ? `<p class="small muted">Transfer manual: silakan transfer sesuai nominal lalu kirim bukti ke WhatsApp admin untuk verifikasi.</p>`
+      : "";
+    return `<div class="check-card">
+      <h3>Lapak ${esc(b.spot_code)}</h3>
+      <p class="muted small">${esc(fmtDate(b.event_date))}</p>
+      <div class="check-status ${esc(status)}">${esc(label)}</div>
+      <dl class="spot-facts">
+        <div><dt>Kode booking</dt><dd>${esc(b.code)}</dd></div>
+        <div><dt>Nama</dt><dd>${esc(b.name)}</dd></div>
+        <div><dt>Jenis usaha</dt><dd>${esc(b.business_type)}</dd></div>
+        <div><dt>WhatsApp</dt><dd>${esc(b.wa_number)}</dd></div>
+        <div><dt>Harga</dt><dd>${rupiah(b.amount_idr)}</dd></div>
+        <div><dt>Metode</dt><dd>${esc(method)}</dd></div>
+        <div><dt>Dibuat</dt><dd>${esc(b.created_at || "—")}</dd></div>
+        <div><dt>Dibayar</dt><dd>${esc(b.paid_at || "—")}</dd></div>
+        <div><dt>Ref pembayaran</dt><dd>${esc(b.payment_ref || "—")}</dd></div>
+      </dl>
+      ${transferNote}
+      <div class="check-actions">
+        <a class="btn btn-primary" href="ticket.html?code=${encodeURIComponent(b.code)}&date=${encodeURIComponent(b.event_date)}">Lihat e-tiket</a>
+        ${payBtn}
+        ${transferBtn}
+      </div>
+    </div>`;
+  }
+  async function checkOrder(code) {
+    const msg = $("#checkOrderMsg");
+    const box = $("#checkOrderResult");
+    const btn = $("#checkOrderBtn");
+    msg.hidden = true; box.hidden = true; box.innerHTML = "";
+    if (!code) { msg.textContent = "Masukkan kode booking."; msg.hidden = false; return; }
+    btn.disabled = true; btn.textContent = "Mengecek…";
+    try {
+      const res = await fetch(`/api/booking?code=${encodeURIComponent(code)}`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Booking tidak ditemukan");
+      box.innerHTML = renderCheckResult(data.booking);
+      box.hidden = false;
+    } catch (err) {
+      msg.textContent = err.message || "Gagal mengecek pesanan.";
+      msg.hidden = false;
+    } finally {
+      btn.disabled = false; btn.textContent = "Cek pesanan";
+    }
+  }
+  const checkForm = $("#checkOrderForm");
+  if (checkForm) {
+    checkForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const code = $("#checkCode").value.trim().toUpperCase();
+      $("#checkCode").value = code;
+      checkOrder(code);
+    });
+  }
+  // Auto-fill dari query/hash atau booking terakhir
+  const params = new URLSearchParams(location.search);
+  const prefillCode = (params.get("code") || "").trim().toUpperCase();
+  if (prefillCode && $("#checkCode")) {
+    $("#checkCode").value = prefillCode;
+    checkOrder(prefillCode);
+  } else {
+    try {
+      const last = JSON.parse(localStorage.getItem("cfdsemarang.last.v1") || "null");
+      if (last && last.code && $("#checkCode")) $("#checkCode").placeholder = `Contoh: ${last.code}`;
+    } catch {}
+  }
 
   /* ---------- toast ---------- */
   let toastTimer = null;

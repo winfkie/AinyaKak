@@ -112,7 +112,7 @@ async function createSnap(env, booking, origin) {
       first_name: String(booking.name).slice(0, 50),
       phone: booking.wa_number,
     },
-    enabled_payments: ["other_qris"],
+    enabled_payments: ["qris", "other_qris"],
     expiry: { unit: "hours", duration: 24 },
   };
   if (origin) {
@@ -235,7 +235,9 @@ async function getBooking(url, env) {
   const code = cleanText(url.searchParams.get("code"), 40);
   if (!code) return fail("Kode booking wajib diisi");
   const row = await env.DB.prepare(
-    "SELECT code, spot_code, event_date, name, business_type, wa_number, amount_idr, status, paid_at, created_at FROM bookings WHERE code = ?"
+    `SELECT code, spot_code, event_date, name, business_type, wa_number, amount_idr,
+            status, payment_method, payment_ref, snap_url, paid_at, created_at
+       FROM bookings WHERE code = ?`
   )
     .bind(code)
     .first();
@@ -256,6 +258,7 @@ async function createBooking(request, env) {
   const name = cleanText(body.name, 60);
   const type = cleanText(body.type, 30);
   const wa = cleanWa(body.wa);
+  const paymentMethod = cleanText(body.payment_method, 20).toLowerCase() || "qris";
 
   if (!validDate(date)) return fail("Minggu yang dipilih tidak valid");
   const win = windowFor(date);
@@ -271,32 +274,40 @@ async function createBooking(request, env) {
   if (name.length < 2) return fail("Nama minimal 2 karakter");
   if (!BUSINESS_TYPES.includes(type)) return fail("Jenis usaha tidak valid");
   if (!/^62\d{8,14}$/.test(wa)) return fail("Nomor WhatsApp tidak valid");
+  if (!["qris", "transfer"].includes(paymentMethod)) return fail("Metode pembayaran tidak valid");
 
   const amount = await priceFor(env, spot);
   const origin = new URL(request.url).origin;
 
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = makeCode(spot);
-    const snap = await createSnap(env, { code, spot_code: spot, event_date: date, amount_idr: amount, name, wa_number: wa }, origin);
-    // Kalau Midtrans sedang bermasalah/tombol bayar belum aktif, booking tetap
-    // dicatat sebagai pending supaya admin bisa mengonfirmasi manual.
-    const manual = Boolean(snap.error);
-    if (manual && env.ALLOW_MANUAL_FALLBACK !== "true") {
-      return fail("Pembayaran belum bisa dibuat: " + snap.error, 502);
+    let snap = { error: null, token: null, redirect_url: "" };
+    let qrisError = null;
+    let effectiveMethod = paymentMethod;
+
+    if (paymentMethod === "qris") {
+      snap = await createSnap(env, { code, spot_code: spot, event_date: date, amount_idr: amount, name, wa_number: wa }, origin);
+      if (snap.error) {
+        qrisError = snap.error;
+        // Fallback otomatis ke transfer manual agar booking tetap bisa dibuat.
+        effectiveMethod = "transfer";
+        snap = { error: null, token: null, redirect_url: "" };
+      }
     }
+
+    const paymentRef = effectiveMethod === "qris" ? code : `MANUAL-${code}`;
 
     try {
       await env.DB.prepare(
         `INSERT INTO bookings
-           (code, spot_code, event_date, name, business_type, wa_number, amount_idr, status, payment_ref, snap_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
+           (code, spot_code, event_date, name, business_type, wa_number, amount_idr, status, payment_method, payment_ref, snap_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`
       )
-        .bind(code, spot, date, name, type, wa, amount, code, (snap && snap.redirect_url) || "")
+        .bind(code, spot, date, name, type, wa, amount, effectiveMethod, paymentRef, (snap && snap.redirect_url) || "")
         .run();
     } catch (e) {
       const msg = String(e && e.message);
       if (/UNIQUE/i.test(msg)) {
-        // Bisa bentrok kode (coba lagi) atau lapak sudah dipesan (berhenti).
         const taken = await env.DB.prepare(
           "SELECT 1 AS x FROM bookings WHERE spot_code = ? AND event_date = ? AND status IN ('pending','paid')"
         )
@@ -314,8 +325,11 @@ async function createBooking(request, env) {
       date,
       spot,
       amount,
-      manual,
-      snap: snap.error ? null : { token: snap.token, redirect_url: snap.redirect_url },
+      payment_method: effectiveMethod,
+      requested_payment_method: paymentMethod,
+      qris_fallback: Boolean(qrisError),
+      qris_error: qrisError || "",
+      snap: snap.redirect_url ? { token: snap.token, redirect_url: snap.redirect_url } : null,
     });
   }
   return fail("Gagal membuat kode booking, coba lagi", 500);
@@ -372,7 +386,7 @@ async function adminList(request, env) {
   if (!adminOk(request, env)) return fail("PIN salah", 401);
   const { results } = await env.DB.prepare(
     `SELECT code, spot_code, event_date, name, business_type, wa_number, amount_idr,
-            status, payment_ref, snap_url, paid_at, created_at
+            status, payment_method, payment_ref, snap_url, paid_at, created_at
        FROM bookings ORDER BY created_at DESC`
   ).all();
   return json({ ok: true, bookings: results || [] });

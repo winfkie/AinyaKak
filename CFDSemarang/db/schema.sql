@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   wa_number    TEXT NOT NULL,                 -- WhatsApp penyewa
   amount_idr   INTEGER NOT NULL,              -- harga saat booking (backup dari config)
   status       TEXT NOT NULL DEFAULT 'pending', -- pending | paid | expired | cancelled
+  payment_method TEXT NOT NULL DEFAULT 'qris', -- qris | transfer
   payment_ref  TEXT,                          -- order_id Midtrans / QRIS
   snap_url     TEXT,                          -- halaman pembayaran Snap (bisa dibuka ulang)
   paid_at      TEXT,                          -- ISO timestamp saat webhook paid

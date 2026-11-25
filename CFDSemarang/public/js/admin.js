@@ -60,6 +60,7 @@
         type: b.business_type,
         wa: b.wa_number,
         status: b.status,
+        method: b.payment_method || "qris",
         amount: b.amount_idr,
         createdAt: b.created_at,
         paidAt: b.paid_at,
@@ -197,6 +198,7 @@
         <td>${escapeHtml(b.type)}</td>
         <td><a href="${waLink(b.wa)}" target="_blank" rel="noopener">${escapeHtml(b.wa)}</a></td>
         <td>${rupiah(b.amount)}</td>
+        <td><span class="small">${b.method === "transfer" ? "Transfer" : "QRIS"}</span></td>
         <td>${badge(b.status)}</td>
         <td class="muted">${fmtTime(b.createdAt)}</td>
         <td class="row-actions">
@@ -262,9 +264,9 @@
   function exportCsv() {
     const list = filtered();
     if (!list.length) { showToast("Tidak ada data untuk diunduh."); return; }
-    const head = ["Minggu", "Kode", "Lapak", "Nama", "Jenis usaha", "WhatsApp", "Biaya", "Status bayar", "Dipesan"];
+    const head = ["Minggu", "Kode", "Lapak", "Nama", "Jenis usaha", "WhatsApp", "Biaya", "Metode", "Status bayar", "Dipesan"];
     const lines = [head.join(";")].concat(list.map(({ date, spot, b }) =>
-      [fmtDate(date), b.code, spot, b.name, b.type, b.wa, b.amount,
+      [fmtDate(date), b.code, spot, b.name, b.type, b.wa, b.amount, b.method === "transfer" ? "Transfer manual" : "QRIS",
        STATUS_LABEL[b.status] || b.status, fmtTime(b.createdAt)]
         .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")));
     const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });

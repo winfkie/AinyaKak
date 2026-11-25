@@ -208,6 +208,37 @@ a { color: inherit; }
 .spot-facts dd { margin: 0; font-weight: 600; }
 .popup-actions { display: grid; gap: 10px; }
 
+/* ---------- payment methods ---------- */
+.pay-methods { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 0 0 12px; display: grid; gap: 8px; }
+.pay-methods legend { font-size: 13px; font-weight: 700; padding: 0 6px; }
+.pay-option { display: flex; gap: 10px; align-items: flex-start; font-weight: 500; font-size: 14px; cursor: pointer; }
+.pay-option input { margin-top: 3px; }
+.pay-option span { display: grid; gap: 2px; }
+.pay-option small { color: #666; font-size: 12px; line-height: 1.35; font-weight: 400; }
+
+/* ---------- check order ---------- */
+.check-order-form {
+  display: grid; gap: 12px; max-width: 560px;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px;
+}
+.check-order-form label { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
+.check-order-form input {
+  width: 100%; padding: 12px 13px; border: 1px solid var(--line); border-radius: 10px;
+  font: inherit; font-size: 15px;
+}
+.check-order-form input:focus { outline: 2px solid rgba(214,52,38,.2); border-color: var(--red); }
+.check-result { margin-top: 16px; max-width: 720px; }
+.check-card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px;
+}
+.check-card h3 { margin: 0 0 4px; font-size: 20px; }
+.check-status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; margin: 8px 0 14px; }
+.check-status.paid { background: #e8f5e9; color: #1b5e20; }
+.check-status.pending { background: #fff8e1; color: #8a6500; }
+.check-status.expired, .check-status.cancelled { background: #ffebee; color: #b71c1c; }
+.check-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.check-actions .btn { width: auto; }
+
 /* ---------- form ---------- */
 #bookForm label { display: block; margin-bottom: 12px; font-size: 14px; font-weight: 600; }
 #bookForm input[type="text"], #bookForm input[type="tel"], #bookForm select {

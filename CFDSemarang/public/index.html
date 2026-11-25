@@ -22,6 +22,7 @@
     <nav class="top-nav">
       <a href="#peta">Peta Lapak</a>
       <a href="#cara">Cara Pesan</a>
+      <a href="#cek-pesanan">Cek Pesanan</a>
       <a href="#faq">FAQ</a>
     </nav>
   </header>
@@ -91,6 +92,22 @@
     <p class="note">Pemilik lapak wajib mengurus <em>Izin Pemeriahan Car Free Day</em> dari Dinas Lingkungan Hidup Kota Semarang — lihat FAQ.</p>
   </section>
 
+  <!-- ============ CEK PESANAN ============ -->
+  <section id="cek-pesanan" class="section">
+    <div class="section-head">
+      <h2>Cek status pesanan</h2>
+      <p>Masukkan kode booking untuk melihat detail lengkap pesananmu.</p>
+    </div>
+    <form id="checkOrderForm" class="check-order-form" novalidate>
+      <label for="checkCode">Kode booking
+        <input id="checkCode" name="code" type="text" placeholder="Contoh: CFS-A-W05-AB12" autocomplete="off" required>
+      </label>
+      <button type="submit" class="btn btn-primary" id="checkOrderBtn">Cek pesanan</button>
+    </form>
+    <p class="small" id="checkOrderMsg" hidden></p>
+    <div id="checkOrderResult" class="check-result" hidden></div>
+  </section>
+
   <!-- ============ FAQ ============ -->
   <section class="section" id="faq">
     <div class="section-head">
@@ -111,7 +128,7 @@
       </details>
       <details>
         <summary>Kalau sudah bayar lalu batal?</summary>
-        <p>Batalkan sebelum Sabtu 18.00 WIB → dana kembali sesuai kebijakan refund. Setelah itu lapak dianggap terpakai.</p>
+        <p>Batalkan sebelum Sabtu 18.00 WIB → dana kembali sesuai kebijakan refund. Setelah itu lapak dianggap terpakai. Kamu bisa cek detail pesananmu lewat menu <a href="#cek-pesanan">Cek Pesanan</a>.</p>
       </details>
       <details>
         <summary>Apakah ini situs resmi pemerintah?</summary>
@@ -144,7 +161,7 @@
         <div><dt>Status</dt><dd id="spotStatus"></dd></div>
       </dl>
       <div class="popup-actions">
-        <button class="btn btn-primary" id="chooseBtn">Pilih lapak ini?</button>
+        <button class="btn btn-primary" id="chooseBtn">Pilih tempat ini</button>
         <a class="btn btn-wa" id="askWaBtn" href="#" target="_blank" rel="noopener">Tanya admin ↗</a>
       </div>
     </div>
@@ -173,12 +190,24 @@
         <label>Nomor WhatsApp
           <input type="tel" id="fWa" required pattern="[0-9+ ]{9,16}" placeholder="08xxxxxxxxxx">
         </label>
+        <fieldset class="pay-methods">
+          <legend>Metode pembayaran</legend>
+          <label class="pay-option">
+            <input type="radio" name="payment_method" value="qris" checked>
+            <span><strong>QRIS</strong><small>Bayar otomatis via QRIS.</small></span>
+          </label>
+          <label class="pay-option">
+            <input type="radio" name="payment_method" value="transfer">
+            <span><strong>Transfer manual</strong><small>Konfirmasi pembayaran lewat WhatsApp admin.</small></span>
+          </label>
+        </fieldset>
+        <p class="small muted" id="payMethodHint">Jika QRIS gagal dibuat, sistem otomatis fallback ke transfer manual.</p>
         <label class="consent">
           <input type="checkbox" id="fConsent" required>
           <span>Saya setuju data (nama &amp; WA) dipakai untuk pengelolaan lapak ini.</span>
         </label>
-        <button type="submit" class="btn btn-primary btn-block" id="bookSubmit">Lanjut bayar QRIS</button>
-        <p class="muted small">Pembayaran diproses Midtrans. E-tiket aktif setelah pembayaran terverifikasi.</p>
+        <button type="submit" class="btn btn-primary btn-block" id="bookSubmit">Buat pesanan</button>
+        <p class="muted small">QRIS diproses lewat Midtrans. Transfer manual dikonfirmasi admin via WhatsApp.</p>
       </form>
     </div>
   </div>
