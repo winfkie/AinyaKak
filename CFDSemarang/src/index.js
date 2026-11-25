@@ -10,9 +10,7 @@ import { encryptToken, decryptToken } from "./social/crypto.js";
 import {
   igAppConfig,
   buildAuthUrl,
-  exchangeCodeForShortToken,
-  exchangeForLongLivedToken,
-  refreshLongLivedToken,
+  exchangeCodeForToken,
   fetchMe,
   createVideoContainer,
   getContainerStatus,
@@ -434,7 +432,7 @@ async function igAuthStart(request, env) {
   const origin = new URL(request.url).origin;
   const state = await signState(env, { exp: Date.now() + 10 * 60 * 1000, nonce: crypto.randomUUID() });
   const { url, cfg } = buildAuthUrl(env, origin, state);
-  return json({ ok: true, auth_url: url, redirect_uri: cfg.redirectUri, scopes: cfg.scopes });
+  return json({ ok: true, auth_url: url, redirect_uri: cfg.redirectUri, config_id: cfg.configId, scopes: cfg.scopes });
 }
 
 async function igAuthCallback(request, env) {
@@ -448,23 +446,23 @@ async function igAuthCallback(request, env) {
   if (!code || !stateOk) return htmlPage("Instagram OAuth gagal", `<p class="err">State OAuth tidak valid atau kedaluwarsa. Ulangi dari panel admin.</p>`);
   try {
     const origin = url.origin;
-    const short = await exchangeCodeForShortToken(env, origin, code);
-    const long = await exchangeForLongLivedToken(env, short.accessToken);
-    const me = await fetchMe(long.accessToken);
-    const igUserId = me.igUserId || short.userId;
+    const token = await exchangeCodeForToken(env, code);
+    if (!token.accessToken) throw new Error("Meta tidak mengembalikan access token");
+    const me = await fetchMe(token.accessToken);
+    const igUserId = me.igUserId;
     if (!igUserId) throw new Error("Instagram user_id tidak ditemukan");
     const saved = await saveIgAccount(env, {
       igUserId,
       username: me.username,
       accountType: me.accountType,
-      token: long.accessToken,
-      tokenType: long.tokenType,
+      token: token.accessToken,
+      tokenType: token.tokenType,
       scopes: igAppConfig(env, origin).scopes,
-      expiresIn: long.expiresIn,
+      expiresIn: token.expiresIn,
     });
     return htmlPage("Instagram terhubung", `<p class="ok">Akun Instagram berhasil dihubungkan.</p><pre>${cleanText(JSON.stringify({ ig_user_id: saved.igUserId, username: saved.username, account_type: saved.accountType, expires_at: saved.expiresAt }, null, 2), 2000)}</pre><p>Kamu bisa menutup tab ini dan kembali ke panel admin.</p>`);
   } catch (e) {
-    return htmlPage("Instagram OAuth gagal", `<p class="err">${cleanText(e && e.message ? e.message : String(e), 500)}</p><p>Pastikan akun Instagram adalah Professional (Business/Creator), terhubung ke app Meta, dan redirect URI cocok.</p>`);
+    return htmlPage("Instagram OAuth gagal", `<p class="err">${cleanText(e && e.message ? e.message : String(e), 500)}</p><p>Pastikan akun Instagram Professional sudah diundang sebagai Instagram Tester, undangan diterima di Instagram (Settings > Website permissions > Apps and websites > Tester Invites), dan redirect URI cocok dengan konfigurasi Meta.</p>`);
   }
 }
 
@@ -494,7 +492,9 @@ async function igStatus(request, env) {
       has_app_id: Boolean(env.IG_APP_ID),
       has_app_secret: Boolean(env.IG_APP_SECRET),
       has_token_enc_key: Boolean(env.IG_TOKEN_ENC_KEY),
+      has_config_id: Boolean(env.IG_CONFIG_ID),
       redirect_uri: igAppConfig(env, new URL(request.url).origin).redirectUri,
+      config_id: igAppConfig(env, new URL(request.url).origin).configId,
       scopes: igAppConfig(env, new URL(request.url).origin).scopes,
     },
   });

@@ -30,9 +30,10 @@ export default defineConfig({
       // Instagram Graph API / content publishing (akun Professional).
       IG_APP_ID: bindings.secret(),
       IG_APP_SECRET: bindings.secret(),
+      IG_CONFIG_ID: bindings.secret(), // config_id Facebook Login for Business
       IG_TOKEN_ENC_KEY: bindings.secret(), // kunci enkripsi token di D1
       IG_REDIRECT_URI: bindings.text(""),  // opsional; default: <origin>/api/admin/instagram/callback
-      IG_SCOPES: bindings.text("instagram_business_basic,instagram_business_content_publish"),
+      IG_SCOPES: bindings.text("instagram_basic,instagram_content_publish"),
     },
   },
 });

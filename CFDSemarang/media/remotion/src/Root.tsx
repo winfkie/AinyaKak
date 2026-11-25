@@ -7,7 +7,7 @@ export const Root: React.FC = () => {
       <Composition
         id="CfdPromo"
         component={CfdPromo}
-        durationInFrames={30 * 15}
+        durationInFrames={30 * 22}
         fps={30}
         width={1080}
         height={1920}
@@ -15,7 +15,8 @@ export const Root: React.FC = () => {
         defaultProps={{
           title: "CFD Semarang",
           subtitle: "Booking lapak 3x3 m tanpa ribet",
-          cta: "Pesan di cfdsemarang.aidanrn06.workers.dev",
+          cta: "Pilih Minggu • Pilih Lapak • Bayar QRIS",
+          finalText: "amankan tempatmu sekarang!",
         }}
       />
     </>

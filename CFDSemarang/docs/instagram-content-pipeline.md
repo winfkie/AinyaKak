@@ -2,25 +2,21 @@
 
 Dokumen ini menjelaskan fondasi koneksi Instagram + pipeline konten video.
 
-## 1. Akun Instagram Professional (belum ada)
+## 1. Akun Instagram Professional dan Meta app
 
-Instagram Graph API hanya mendukung akun **Professional** (Business atau Creator).
+Worker memakai **Instagram API dengan Unified Login** (Facebook Login for Business), API host `graph.facebook.com`, dan token BISU.
 
-### Checklist pembuatan akun
+### Checklist
 
-1. Buat akun Instagram biasa (aplikasi Instagram).
-2. Ubah ke Professional: **Settings > Account type and tools > Switch to professional account**.
-3. Pilih **Business** atau **Creator**.
-4. Buat/hubungkan Facebook Page (disarankan untuk pengelolaan Meta Business).
-5. Buat Meta app di [developers.facebook.com](https://developers.facebook.com/) dan aktifkan use case Instagram API / Instagram Login sesuai mode app.
-6. Tambahkan permission:
-   - `instagram_business_basic`
-   - `instagram_business_content_publish`
-7. Isi **OAuth Redirect URI** dengan:
-   - `https://cfdsemarang.aidanrn06.workers.dev/api/admin/instagram/callback`
-   - Untuk lokal: `http://127.0.0.1:8788/api/admin/instagram/callback`
-8. Simpan `IG_APP_ID`, `IG_APP_SECRET` sebagai Worker secret. Simpan `IG_TOKEN_ENC_KEY` (string acak panjang) untuk enkripsi token di D1.
-9. Selama app mode Development, hanya role/tester yang diberi akses bisa publish; untuk akun orang lain butuh App Review/Advanced Access.
+1. Akun Instagram harus **Professional** (Business atau Creator).
+2. Meta app **Project AI Opencode** memiliki use case **Manage messaging & content on Instagram** dan terhubung ke business portfolio.
+3. Di **Use cases > Instagram API > API setup with Unified login**:
+   - Buat/aktifkan konfigurasi dengan permission `instagram_basic` dan `instagram_content_publish`.
+   - Redirect URL: `https://cfdsemarang.aidanrn06.workers.dev/api/admin/instagram/callback`.
+   - Salin `config_id` dari konfigurasi yang dipilih.
+4. Di **Generate access tokens**, undang akun Instagram sebagai **Instagram Tester**, lalu terima undangannya di Instagram: **Settings > Website permissions > Apps and websites > Tester Invites**.
+5. Simpan Worker secret: `IG_APP_ID`, `IG_APP_SECRET`, `IG_CONFIG_ID`, `IG_TOKEN_ENC_KEY`.
+6. Untuk akun di luar tester/app owner, app harus Live dan mendapat Advanced Access lewat App Review.
 
 ## 2. Endpoint Worker (fondasi)
 
@@ -28,8 +24,8 @@ Semua endpoint butuh header `x-admin-pin` kecuali callback OAuth.
 
 | Method | Path | Fungsi |
 |---|---|---|
-| GET | `/api/admin/instagram/auth/start` | Buat URL OAuth Instagram (state signed) |
-| GET | `/api/admin/instagram/callback` | Tukar code→short token→long-lived token, simpan terenkripsi |
+| GET | `/api/admin/instagram/auth/start` | Buat URL Facebook Login for Business dengan `config_id` (state signed) |
+| GET | `/api/admin/instagram/callback` | Tukar code→BISU token, ambil IG user ID, simpan terenkripsi |
 | GET | `/api/admin/instagram/status` | Status akun terhubung + config + 20 job terakhir |
 | POST | `/api/admin/instagram/disconnect` | Hapus akun/token dari D1 |
 | POST | `/api/admin/instagram/publish` | Buat container Reels, polling, publish |
@@ -52,6 +48,10 @@ curl -X POST https://cfdsemarang.aidanrn06.workers.dev/api/admin/instagram/publi
 - Ekspor hasil ke `media/assets/` atau `media/remotion/public/`.
 
 ### B. Remotion (komposisi)
+Template `CfdPromo` berdurasi 22 detik. Scene terakhir menampilkan teks
+`amankan tempatmu sekarang!` dan QR code ke situs CFDSemarang
+(`public/qr-cfdsemarang.svg`) agar penonton bisa langsung scan.
+
 ```bash
 cd media/remotion
 npm install
@@ -80,5 +80,5 @@ Video final harus tersedia di URL publik HTTPS. Lalu panggil `/api/admin/instagr
 
 - **Worker CPU/timeout**: publish endpoint melakukan polling singkat; kalau container belum FINISHED, job jadi `processing` dan bisa dipublish ulang lewat `/jobs/publish`.
 - **Media hosting**: Meta mengambil video dari `video_url` publik. Jangan pakai file lokal langsung.
-- **Token**: token long-lived perlu refresh sebelum kedaluwarsa (belum otomatis terjadwal; fondasi refresh ada di `src/social/instagram.js`).
+- **Token**: BISU token masa berlakunya mengikuti konfigurasi Meta. Jika kedaluwarsa, ulangi OAuth dari `/auth/start`.
 - **Keamanan**: jangan simpan token di repo; pakai Worker secret + token terenkripsi D1.

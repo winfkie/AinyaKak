@@ -88,7 +88,7 @@ Rahasia untuk lokal disimpan di **`.dev.vars`** (tidak di-commit — lihat `.dev
 
 ```
 MIDTRANS_SERVER_KEY=Mid-server-...
-ADMIN_PIN=123456
+ADMIN_PIN=PIN-rahasia-anda
 ```
 
 ## Men-deploy
@@ -104,6 +104,7 @@ cf workers secrets update MIDTRANS_SERVER_KEY --text "Mid-server-..."
 cf workers secrets update ADMIN_PIN --text "PIN-baru-anda"
 cf workers secrets update IG_APP_ID --type secret_text --text "<app-id>"
 cf workers secrets update IG_APP_SECRET --type secret_text --text "<app-secret>"
+cf workers secrets update IG_CONFIG_ID --type secret_text --text "<config-id>"
 cf workers secrets update IG_TOKEN_ENC_KEY --type secret_text --text "<random-long-string>"
 ```
 
@@ -159,8 +160,8 @@ PIN diverifikasi di server lewat secret `ADMIN_PIN`, bukan di file publik.
 ## Instagram & Pipeline Konten (fondasi)
 
 Lihat [docs/instagram-content-pipeline.md](docs/instagram-content-pipeline.md) untuk:
-- checklist membuat akun Instagram Professional (Business/Creator),
-- setup Meta app + OAuth redirect/callback,
+- checklist akun Instagram Professional + Meta app dengan Unified Login,
+- setup `config_id`, redirect/callback, dan Instagram Tester,
 - endpoint admin Instagram (`/api/admin/instagram/*`),
 - alur konten: **Google Labs Flow/Veo → Remotion → ElevenLabs → FFmpeg → publish IG**.
 
@@ -173,8 +174,9 @@ Lihat [docs/instagram-content-pipeline.md](docs/instagram-content-pipeline.md) u
 - [ ] Aktifkan QRIS di akun Midtrans (butuh NPWP) atau pakai fallback manual
       (`ALLOW_MANUAL_FALLBACK=true` di `cloudflare.config.ts`).
 - [ ] Konfirmasi jadwal/jam CFD terbaru dari PPID Kota Semarang.
-- [ ] Buat akun Instagram Professional + Meta app, isi `IG_APP_ID/IG_APP_SECRET/IG_TOKEN_ENC_KEY`.
-- [ ] Set redirect URI Instagram ke `/api/admin/instagram/callback`.
+- [ ] Siapkan akun Instagram Professional, Meta app + Unified Login configuration,
+      lalu isi `IG_APP_ID/IG_APP_SECRET/IG_CONFIG_ID/IG_TOKEN_ENC_KEY`.
+- [ ] Set redirect URI ke `/api/admin/instagram/callback` dan terima undangan Instagram Tester.
 
 ## Kredit & legal
 

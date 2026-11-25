@@ -1,9 +1,9 @@
-/* Helper Instagram Graph API (Instagram Login / graph.instagram.com).
- * Dipakai Worker untuk OAuth, container Reels, status, dan publish.
+/* Helper Instagram API dengan Unified Login (Facebook Login for Business).
+ * OAuth memakai config_id; token dan request API memakai graph.facebook.com.
  */
 
-const GRAPH_VERSION = "v23.0";
-const GRAPH_HOST = "https://graph.instagram.com";
+const GRAPH_HOST = "https://graph.facebook.com";
+const GRAPH_VERSION = "v27.0";
 
 function cleanText(v, max) {
   return String(v == null ? "" : v).replace(/\s+/g, " ").trim().slice(0, max);
@@ -42,64 +42,39 @@ export function igAppConfig(env, origin) {
   return {
     appId: cleanText(env.IG_APP_ID, 120),
     appSecret: cleanText(env.IG_APP_SECRET, 200),
+    configId: cleanText(env.IG_CONFIG_ID, 120),
     redirectUri: cleanText(env.IG_REDIRECT_URI, 500) || `${origin}/api/admin/instagram/callback`,
-    scopes: cleanText(env.IG_SCOPES, 300) || "instagram_business_basic,instagram_business_content_publish",
+    scopes: cleanText(env.IG_SCOPES, 300) || "instagram_basic,instagram_content_publish",
   };
 }
 
 export function buildAuthUrl(env, origin, state) {
   const cfg = igAppConfig(env, origin);
   if (!cfg.appId) throw new Error("IG_APP_ID belum diset");
-  const url = new URL("https://www.instagram.com/oauth/authorize");
+  if (!cfg.configId) throw new Error("IG_CONFIG_ID belum diset (config_id dari Meta dashboard)");
+  const url = new URL("https://www.facebook.com/dialog/oauth");
   url.searchParams.set("client_id", cfg.appId);
+  url.searchParams.set("config_id", cfg.configId);
   url.searchParams.set("redirect_uri", cfg.redirectUri);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", cfg.scopes);
+  url.searchParams.set("display", "popup");
+  url.searchParams.set("prompt", "login");
   url.searchParams.set("state", state);
-  // force_reauth bisa ditambah jika admin ingin ganti akun.
   return { url: url.toString(), cfg };
 }
 
-export async function exchangeCodeForShortToken(env, origin, code) {
-  const cfg = igAppConfig(env, origin);
+export async function exchangeCodeForToken(env, code) {
+  const cfg = igAppConfig(env, "");
   if (!cfg.appId || !cfg.appSecret) throw new Error("IG_APP_ID / IG_APP_SECRET belum diset");
   const data = await graph("/oauth/access_token", {
-    method: "POST",
-    form: {
+    params: {
       client_id: cfg.appId,
       client_secret: cfg.appSecret,
-      grant_type: "authorization_code",
-      redirect_uri: cfg.redirectUri,
       code,
     },
   });
-  return { accessToken: data.access_token, userId: data.user_id ? String(data.user_id) : "", raw: data };
-}
-
-export async function exchangeForLongLivedToken(env, shortToken) {
-  const cfg = igAppConfig(env, "");
-  if (!cfg.appSecret) throw new Error("IG_APP_SECRET belum diset");
-  const data = await graph("/access_token", {
-    params: {
-      grant_type: "ig_exchange_token",
-      client_secret: cfg.appSecret,
-      access_token: shortToken,
-    },
-  });
   return {
-    accessToken: data.access_token,
-    tokenType: data.token_type || "bearer",
-    expiresIn: data.expires_in ? Number(data.expires_in) : null,
-    raw: data,
-  };
-}
-
-export async function refreshLongLivedToken(token) {
-  const data = await graph("/refresh_access_token", {
-    params: { grant_type: "ig_refresh_token", access_token: token },
-  });
-  return {
-    accessToken: data.access_token,
+    accessToken: data.access_token || "",
     tokenType: data.token_type || "bearer",
     expiresIn: data.expires_in ? Number(data.expires_in) : null,
     raw: data,
@@ -107,16 +82,28 @@ export async function refreshLongLivedToken(token) {
 }
 
 export async function fetchMe(token) {
-  const data = await graph("/me", {
+  const me = await graph("/me", { token, params: { fields: "client_business_id" } });
+  const accounts = await graph("/me/assigned_instagram_accounts", {
     token,
-    params: { fields: "user_id,username,account_type,name,profile_picture_url" },
+    params: { fields: "id,username" },
   });
+  const found = (accounts.data || []).find((item) => item && item.id) || {};
+  const igUserId = String(found.id || "");
+  if (!igUserId) throw new Error("Tidak ada Instagram account yang dibagikan ke app");
+
+  let detail = {};
+  try {
+    detail = await graph(`/${igUserId}`, { token, params: { fields: "account_type,name,username" } });
+  } catch {
+    // Field tambahan tidak tersedia untuk sebagian akun; id + username cukup.
+  }
   return {
-    igUserId: String(data.user_id || data.id || ""),
-    username: data.username || "",
-    accountType: data.account_type || "",
-    name: data.name || "",
-    raw: data,
+    igUserId,
+    username: detail.username || found.username || "",
+    accountType: detail.account_type || "",
+    name: detail.name || "",
+    clientBusinessId: String(me.client_business_id || ""),
+    raw: { me, accounts },
   };
 }
 
