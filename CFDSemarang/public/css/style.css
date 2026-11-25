@@ -238,6 +238,14 @@ a { color: inherit; }
 .check-status.expired, .check-status.cancelled { background: #ffebee; color: #b71c1c; }
 .check-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 .check-actions .btn { width: auto; }
+.last-order-card { max-width: 720px; margin-bottom: 16px; border-color: #f0c36a; background: #fffdf7; }
+.fallback-notice {
+  margin: 12px 0; padding: 14px; border-radius: 12px;
+  background: #fff1f1; border: 1px solid #f2b8b0; color: #5d1111;
+}
+.fallback-notice strong { display: block; margin-bottom: 4px; font-size: 15px; }
+.fallback-notice p { margin: 0 0 10px; font-size: 14px; color: #6b1a1a; }
+.fallback-notice .btn { width: auto; }
 
 /* ---------- form ---------- */
 #bookForm label { display: block; margin-bottom: 12px; font-size: 14px; font-weight: 600; }

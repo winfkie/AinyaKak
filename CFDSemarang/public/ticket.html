@@ -131,11 +131,15 @@
 
         const snap = snapFor(b.spot_code, b.event_date) || b.snap_url || "";
         const waAdmin = "https://wa.me/" + (window.CFDS && CFDS.waMeNumber ? CFDS.waMeNumber : "6281232793825");
+        const transferWa = waAdmin + "?text=" + encodeURIComponent(`Halo admin CFDSemarang, saya mau konfirmasi transfer untuk booking ${b.code} (lapak ${b.spot_code}, ${b.event_date}, ${b.name}, ${rupiah(b.amount_idr)}).`);
         if (b.status === "pending" && b.payment_method === "transfer") {
           $("#tPay").hidden = false;
-          $("#tPayMsg").textContent = "Pembayaran transfer manual belum dikonfirmasi. ";
-          $("#tPayLink").textContent = "Konfirmasi transfer via WhatsApp";
-          $("#tPayLink").href = waAdmin + "?text=" + encodeURIComponent(`Halo admin CFDSemarang, saya mau konfirmasi transfer untuk booking ${b.code} (lapak ${b.spot_code}, ${b.event_date}, ${b.name}, ${rupiah(b.amount_idr)}).`);
+          $("#tPayMsg").innerHTML = `<strong style="color:#b3261e">Sistem QRIS gagal/dialihkan ke transfer manual.</strong> Pesanan tetap tercatat. `;
+          $("#tPayLink").textContent = "Lanjut ke WhatsApp";
+          $("#tPayLink").href = transferWa;
+          $("#tPayLink").className = "btn btn-wa";
+          $("#tPayLink").style.display = "inline-flex";
+          $("#tPayLink").style.marginTop = "8px";
         } else if (b.status === "pending" && snap) {
           $("#tPay").hidden = false;
           $("#tPayMsg").textContent = "Pembayaran belum selesai. ";

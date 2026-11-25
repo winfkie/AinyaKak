@@ -360,15 +360,16 @@
       renderMap();
 
       if (data.payment_method === "qris" && data.snap && data.snap.redirect_url) {
-        showToast(data.qris_fallback ? "QRIS gagal, dialihkan ke transfer manual." : "Mengarahkan ke pembayaran QRIS…");
-        if (!data.qris_fallback) {
-          location.href = data.snap.redirect_url;
-          return;
-        }
+        showToast("Mengarahkan ke pembayaran QRIS…");
+        location.href = data.snap.redirect_url;
+        return;
       }
       if (data.qris_fallback) {
-        showToast("QRIS gagal dibuat. Booking dicatat, lanjut transfer manual via WhatsApp.");
-      } else if (data.payment_method === "transfer") {
+        showToast("QRIS gagal. Dialihkan ke konfirmasi transfer via WhatsApp.");
+        location.href = `index.html?code=${encodeURIComponent(data.code)}&fallback=${encodeURIComponent(data.code)}#cek-pesanan`;
+        return;
+      }
+      if (data.payment_method === "transfer") {
         showToast("Booking dibuat. Silakan konfirmasi transfer manual via WhatsApp.");
       } else {
         showToast("Booking dibuat. Cek detail pesananmu.");
@@ -393,27 +394,40 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;")
       .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
-  function renderCheckResult(b) {
+  function waTransferLink(b) {
+    const text = encodeURIComponent(
+      `Halo admin CFDSemarang, saya mau konfirmasi pembayaran transfer untuk booking ${b.code} (lapak ${b.spot_code}, ${b.event_date}, ${b.name}, ${rupiah(b.amount_idr)}).`
+    );
+    return `https://wa.me/${CFG.waMeNumber}?text=${text}`;
+  }
+  function renderFallbackNotice(b) {
+    if (!b || b.status !== "pending" || b.payment_method !== "transfer") return "";
+    return `<div class="fallback-notice">
+      <strong>Sistem QRIS gagal / dialihkan ke transfer manual</strong>
+      <p>Pesananmu tetap tercatat. Silakan lanjut konfirmasi pembayaran lewat WhatsApp agar admin bisa memverifikasi booking <b>${esc(b.code)}</b>.</p>
+      <a class="btn btn-wa" href="${waTransferLink(b)}" target="_blank" rel="noopener">Lanjut ke WhatsApp</a>
+    </div>`;
+  }
+  function renderCheckResult(b, opts = {}) {
     const status = b.status || "pending";
     const label = statusLabel[status] || status;
     const method = b.payment_method === "transfer" ? "Transfer manual" : "QRIS";
     const payBtn = status === "pending" && b.payment_method !== "transfer" && b.snap_url
       ? `<a class="btn btn-primary" href="${esc(b.snap_url)}" target="_blank" rel="noopener">Lanjut bayar QRIS</a>`
       : "";
-    const waText = encodeURIComponent(
-      `Halo admin CFDSemarang, saya mau konfirmasi pembayaran transfer untuk booking ${b.code} (lapak ${b.spot_code}, ${b.event_date}, ${b.name}, ${rupiah(b.amount_idr)}).`
-    );
-    const wa = `https://wa.me/${CFG.waMeNumber}?text=${waText}`;
+    const wa = waTransferLink(b);
     const transferBtn = status === "pending" && b.payment_method === "transfer"
       ? `<a class="btn btn-wa" href="${wa}" target="_blank" rel="noopener">Konfirmasi transfer via WhatsApp</a>`
       : `<a class="btn btn-wa" href="https://wa.me/${CFG.waMeNumber}?text=${encodeURIComponent(`Halo admin CFDSemarang, saya mau tanya soal pesanan ${b.code}.`)}" target="_blank" rel="noopener">Hubungi admin</a>`;
     const transferNote = status === "pending" && b.payment_method === "transfer"
       ? `<p class="small muted">Transfer manual: silakan transfer sesuai nominal lalu kirim bukti ke WhatsApp admin untuk verifikasi.</p>`
       : "";
+    const fallback = opts.showFallback ? renderFallbackNotice(b) : "";
     return `<div class="check-card">
       <h3>Lapak ${esc(b.spot_code)}</h3>
       <p class="muted small">${esc(fmtDate(b.event_date))}</p>
       <div class="check-status ${esc(status)}">${esc(label)}</div>
+      ${fallback}
       <dl class="spot-facts">
         <div><dt>Kode booking</dt><dd>${esc(b.code)}</dd></div>
         <div><dt>Nama</dt><dd>${esc(b.name)}</dd></div>
@@ -433,7 +447,7 @@
       </div>
     </div>`;
   }
-  async function checkOrder(code) {
+  async function checkOrder(code, opts = {}) {
     const msg = $("#checkOrderMsg");
     const box = $("#checkOrderResult");
     const btn = $("#checkOrderBtn");
@@ -444,8 +458,9 @@
       const res = await fetch(`/api/booking?code=${encodeURIComponent(code)}`);
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Booking tidak ditemukan");
-      box.innerHTML = renderCheckResult(data.booking);
+      box.innerHTML = renderCheckResult(data.booking, opts);
       box.hidden = false;
+      localStorage.setItem("cfdsemarang.last.v1", JSON.stringify({ code: data.booking.code, date: data.booking.event_date }));
     } catch (err) {
       msg.textContent = err.message || "Gagal mengecek pesanan.";
       msg.hidden = false;
@@ -462,18 +477,34 @@
       checkOrder(code);
     });
   }
-  // Auto-fill dari query/hash atau booking terakhir
+  async function loadLastOrderCard() {
+    const card = $("#lastOrderCard");
+    if (!card) return;
+    let last = null;
+    try { last = JSON.parse(localStorage.getItem("cfdsemarang.last.v1") || "null"); } catch {}
+    if (!last || !last.code) return;
+    try {
+      const res = await fetch(`/api/booking?code=${encodeURIComponent(last.code)}`);
+      const data = await res.json();
+      if (!data.ok) return;
+      card.innerHTML = `<p class="small muted" style="margin:0 0 10px;font-weight:700;color:#8a6500">Pesanan terakhir di perangkat ini</p>` + renderCheckResult(data.booking);
+      card.hidden = false;
+    } catch {}
+  }
+
   const params = new URLSearchParams(location.search);
   const prefillCode = (params.get("code") || "").trim().toUpperCase();
+  const fallbackCode = (params.get("fallback") || "").trim().toUpperCase();
   if (prefillCode && $("#checkCode")) {
     $("#checkCode").value = prefillCode;
-    checkOrder(prefillCode);
+    checkOrder(prefillCode, { showFallback: fallbackCode === prefillCode });
   } else {
     try {
       const last = JSON.parse(localStorage.getItem("cfdsemarang.last.v1") || "null");
       if (last && last.code && $("#checkCode")) $("#checkCode").placeholder = `Contoh: ${last.code}`;
     } catch {}
   }
+  loadLastOrderCard();
 
   /* ---------- toast ---------- */
   let toastTimer = null;
