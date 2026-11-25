@@ -16,3 +16,9 @@ media/scripts/.env
 *.mp3
 *.wav
 *.webm
+
+media/.env
+media/assets/flow/*.mp4
+media/assets/flow/*.mov
+media/assets/music/*.mp3
+media/assets/music/*.wav

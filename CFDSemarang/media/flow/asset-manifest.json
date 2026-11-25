@@ -1,0 +1,71 @@
+{
+  "video": "video-1-cfdsemarang",
+  "format": {
+    "aspect": "9:16",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "durationSeconds": 22
+  },
+  "voiceover": {
+    "provider": "elevenlabs",
+    "tone": "pria, muda, santai",
+    "scriptFile": "../docs/video-1-script.txt",
+    "output": "../out/voiceover.mp3"
+  },
+  "shots": [
+    {
+      "id": "shot-01-hook",
+      "seconds": [0, 2],
+      "source": "google-flow-or-stock",
+      "targetPath": "media/assets/flow/shot-01-hook.mp4",
+      "prompt": "Cinematic vertical 9:16 footage of a lively Sunday morning car free day in Semarang, Indonesia. Crowds walking, local vendors, warm morning light, energetic but friendly atmosphere, no logos, no copyrighted signage, no recognizable faces in focus.",
+      "notes": "Gunakan footage asli/berlisensi. Hindari landmark berlogo/copyright sensitif."
+    },
+    {
+      "id": "shot-02-umkm",
+      "seconds": [2, 6],
+      "source": "google-flow-or-stock",
+      "targetPath": "media/assets/flow/shot-02-umkm.mp4",
+      "prompt": "Vertical 9:16 close-up b-roll of small local Indonesian street vendors selling food, crafts, and clothing at an outdoor market, clean composition, natural daylight, no brand logos, no copyrighted packaging.",
+      "notes": "Bisa diganti rekaman sendiri."
+    },
+    {
+      "id": "shot-03-site-date",
+      "seconds": [6, 10],
+      "source": "screen-recording",
+      "targetPath": "media/assets/flow/shot-03-site-date.mp4",
+      "prompt": "Screen recording of CFDSemarang website selecting a Sunday date.",
+      "notes": "Rekam dari https://cfdsemarang.aidanrn06.workers.dev"
+    },
+    {
+      "id": "shot-04-spot-map",
+      "seconds": [10, 14],
+      "source": "screen-recording",
+      "targetPath": "media/assets/flow/shot-04-spot-map.mp4",
+      "prompt": "Screen recording of choosing a 3x3m spot on the map.",
+      "notes": "Fokus pada peta lapak dan status available."
+    },
+    {
+      "id": "shot-05-qris",
+      "seconds": [14, 16],
+      "source": "screen-recording",
+      "targetPath": "media/assets/flow/shot-05-qris.mp4",
+      "prompt": "Screen recording showing QRIS payment flow.",
+      "notes": "Jangan tampilkan data pribadi/rahasia."
+    },
+    {
+      "id": "shot-06-cta",
+      "seconds": [16, 22],
+      "source": "remotion",
+      "targetPath": "media/remotion/src/CfdPromo.tsx",
+      "prompt": "Final CTA card with QR code and text: amankan  tempatmu sekarang!",
+      "notes": "Sudah dibuat di template Remotion."
+    }
+  ],
+  "music": {
+    "targetPath": "media/assets/music/background.mp3",
+    "license": "royalty-free commercial use",
+    "notes": "Upbeat ringan, volume rendah di bawah VO."
+  }
+}
