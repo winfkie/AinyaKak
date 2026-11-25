@@ -63,13 +63,14 @@ export function buildAuthUrl(env, origin, state) {
   return { url: url.toString(), cfg };
 }
 
-export async function exchangeCodeForToken(env, code) {
-  const cfg = igAppConfig(env, "");
+export async function exchangeCodeForToken(env, origin, code) {
+  const cfg = igAppConfig(env, origin);
   if (!cfg.appId || !cfg.appSecret) throw new Error("IG_APP_ID / IG_APP_SECRET belum diset");
   const data = await graph("/oauth/access_token", {
     params: {
       client_id: cfg.appId,
       client_secret: cfg.appSecret,
+      redirect_uri: cfg.redirectUri,
       code,
     },
   });

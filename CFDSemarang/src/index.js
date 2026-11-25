@@ -446,7 +446,7 @@ async function igAuthCallback(request, env) {
   if (!code || !stateOk) return htmlPage("Instagram OAuth gagal", `<p class="err">State OAuth tidak valid atau kedaluwarsa. Ulangi dari panel admin.</p>`);
   try {
     const origin = url.origin;
-    const token = await exchangeCodeForToken(env, code);
+    const token = await exchangeCodeForToken(env, origin, code);
     if (!token.accessToken) throw new Error("Meta tidak mengembalikan access token");
     const me = await fetchMe(token.accessToken);
     const igUserId = me.igUserId;
