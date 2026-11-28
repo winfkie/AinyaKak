@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #F4F6FB;
+  --color-ivory: #F4F6FB;
+  --color-surface: rgba(255, 255, 255, 0.68);
+  --color-line: rgba(255, 255, 255, 0.85);
+
+  --color-cobalt: #2563EB;
+  --color-cobalt-hover: #1D4ED8;
+  --color-cobalt-soft: #EFF6FF;
+  --color-magenta: #EC4899;
+  --color-magenta-hover: #DB2777;
+  --color-magenta-soft: #FDF2F8;
+  --color-mint: #10B981;
+  --color-mint-soft: #ECFDF5;
+  --color-lavender: #A78BFA;
+
+  --color-forest: #2563EB;
+  --color-forest-hover: #1D4ED8;
+  --color-forest-soft: #EFF6FF;
+  --color-gold: #EC4899;
+  --color-gold-soft: #FDF2F8;
+
+  --color-ink: #111827;
+  --color-muted: #4B5563;
+  --color-danger: #EF4444;
+  --color-danger-soft: #FEF2F2;
+
+  --font-display: var(--font-bricolage), "Plus Jakarta Sans", sans-serif;
+  --font-body: var(--font-jakarta), system-ui, sans-serif;
+  --font-mono: var(--font-space), ui-monospace, SFMono-Regular, monospace;
+  --font-metric: var(--font-space), system-ui, sans-serif;
+}
+
+body {
+  background-color: #F4F6FB;
+  color: #111827;
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-bricolage), "Plus Jakarta Sans", sans-serif;
+}
+
+@utility glass {
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(20px) saturate(1.25);
+  -webkit-backdrop-filter: blur(20px) saturate(1.25);
+}
+
+@utility glass-card {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  box-shadow: 0 8px 32px rgba(37, 99, 235, 0.12);
+}
+
+@utility glass-pill {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+}
+
+@utility y2k-gradient {
+  background: linear-gradient(135deg, #2563EB 0%, #7C3AED 52%, #EC4899 100%);
+}
+
+@utility y2k-text-gradient {
+  background: linear-gradient(135deg, #2563EB 0%, #7C3AED 50%, #EC4899 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility font-metric {
+  font-family: var(--font-space), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+::selection {
+  background-color: rgba(236, 72, 153, 0.18);
+  color: #1D4ED8;
+}
+
